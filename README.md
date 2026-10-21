@@ -7,6 +7,7 @@ Control de viajes de camiones (distribución de cal y otros productos) y del **c
 - **Panel web** en http://127.0.0.1:8000 — tablero, viajes, combustible, reportes y catálogo.
 - **API REST** en http://127.0.0.1:8000/docs
 - **Reportes Excel** con la identidad de la empresa.
+- **Guía técnica para estudiar el proyecto:** [`docs/guia-tecnica.md`](docs/guia-tecnica.md) · versión Word de la guía y de cada sesión en [`docs/word/`](docs/word/) (`uv run python scripts/generar_word.py`).
 - Historial de cada sesión de trabajo en [`docs/sesiones/`](docs/sesiones/).
 
 ## Paleta de marca
