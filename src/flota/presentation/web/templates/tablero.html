@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block titulo %}Tablero{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Tablero</h1>
+    <p>Últimos 30 días · {{ reporte.desde | fecha }} al {{ reporte.hasta | fecha }}</p>
+  </div>
+  <a class="boton" href="/viajes">+ Nuevo viaje</a>
+</div>
+
+{{ m.indicadores(indicadores) }}
+
+<section class="tarjeta tarjeta--acento">
+  <h2>Consumo por camión</h2>
+  {{ m.tabla_resumen(reporte.resumen_por_camion) }}
+</section>
+
+<div class="grilla">
+  <section class="tarjeta">
+    <h2>Viajes en curso</h2>
+    <div class="tabla-contenedor">
+      <table>
+        <thead><tr><th>Salida</th><th>Patente</th><th>Chofer</th><th>Destino</th><th class="num">Litros</th></tr></thead>
+        <tbody>
+          {% for f in en_curso %}
+          <tr>
+            <td>{{ f.fecha_salida | fecha }}</td><td><strong>{{ f.patente }}</strong></td>
+            <td>{{ f.chofer }}</td><td>{{ f.destino }}</td><td class="num">{{ f.litros | numero(1) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="vacio">No hay viajes en curso.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <h2>⚠ Últimas alertas de consumo</h2>
+    <p style="margin-top:0;color:var(--texto-suave);font-size:.85rem">Viajes que superaron en más de {{ umbral | numero(0) }} % el consumo de referencia.</p>
+    <div class="tabla-contenedor">
+      <table>
+        <thead><tr><th>Salida</th><th>Patente</th><th>Chofer</th><th class="num">L/100km</th><th class="num">Desvío</th></tr></thead>
+        <tbody>
+          {% for f in alertas %}
+          <tr class="fila-alerta">
+            <td>{{ f.fecha_salida | fecha(false) }}</td><td><strong>{{ f.patente }}</strong></td>
+            <td>{{ f.chofer }}</td><td class="num">{{ f.consumo_l100km | numero(1) }}</td>
+            <td class="num">{{ m.desvio(f.desvio_pct) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="vacio">Sin alertas. ✔</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

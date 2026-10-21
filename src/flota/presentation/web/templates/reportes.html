@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block titulo %}Reportes{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Reporte de consumo</h1>
+    <p>{{ reporte.desde | fecha }} al {{ reporte.hasta | fecha }}</p>
+  </div>
+  <a class="boton" href="{{ url_excel }}">⬇ Descargar Excel</a>
+</div>
+
+<section class="tarjeta">
+  <form class="formulario--linea" method="get">
+    <div class="campo"><label for="desde">Desde</label><input id="desde" type="date" name="desde" value="{{ reporte.desde | fecha_input }}"></div>
+    <div class="campo"><label for="hasta">Hasta</label><input id="hasta" type="date" name="hasta" value="{{ reporte.hasta | fecha_input }}"></div>
+    <div class="campo"><label for="camion_id">Camión</label>
+      <select id="camion_id" name="camion_id">
+        <option value="">Todos</option>
+        {% for c in camiones %}<option value="{{ c.id }}" {% if c.id == camion_id %}selected{% endif %}>{{ c.patente }}</option>{% endfor %}
+      </select></div>
+    <button class="boton boton--acento" type="submit">Actualizar</button>
+  </form>
+</section>
+
+{{ m.indicadores(indicadores) }}
+
+<section class="tarjeta tarjeta--acento">
+  <h2>Resumen por camión</h2>
+  {{ m.tabla_resumen(reporte.resumen_por_camion) }}
+</section>
+
+<section class="tarjeta">
+  <h2>Detalle por viaje</h2>
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr><th>Salida</th><th>Patente</th><th>Chofer</th><th>Cliente</th><th class="num">Cantidad</th><th class="num">Km</th>
+          <th class="num">Litros</th><th class="num">L/100km</th><th class="num">L por unidad</th><th class="num">Costo</th><th class="num">Desvío</th><th>Estado</th></tr>
+      </thead>
+      <tbody>
+        {% for f in reporte.filas %}
+        <tr{% if f.alerta %} class="fila-alerta"{% endif %}>
+          <td>{{ f.fecha_salida | fecha }}</td><td><strong>{{ f.patente }}</strong></td><td>{{ f.chofer }}</td><td>{{ f.cliente }}</td>
+          <td class="num">{{ f.cantidad | numero(1) }} {{ f.unidad }}</td>
+          <td class="num">{{ f.km_recorridos | numero(0) }}</td>
+          <td class="num">{{ f.litros | numero(1) }}</td>
+          <td class="num">{{ f.consumo_l100km | numero(1) }}</td>
+          <td class="num">{{ f.litros_por_unidad | numero(2) }}</td>
+          <td class="num">{{ f.costo | moneda }}</td>
+          <td class="num">{{ m.desvio(f.desvio_pct) }}</td>
+          <td>{{ m.estado(f) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="12" class="vacio">No hay viajes en el período.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

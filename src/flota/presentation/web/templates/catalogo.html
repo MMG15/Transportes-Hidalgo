@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block titulo %}Flota y clientes{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Flota y clientes</h1>
+    <p>Camiones, choferes, clientes y productos.</p>
+  </div>
+</div>
+
+<div class="grilla">
+  <section class="tarjeta tarjeta--acento">
+    <h2>Camiones</h2>
+    <div class="tabla-contenedor">
+      <table>
+        <thead><tr><th>Patente</th><th>Marca y modelo</th><th class="num">Tanque</th><th class="num">Ref. L/100km</th></tr></thead>
+        <tbody>
+          {% for c in camiones %}
+          <tr><td><strong>{{ c.patente }}</strong></td><td>{{ c.marca }} {{ c.modelo }}</td>
+            <td class="num">{{ c.capacidad_tanque_litros | numero(0) }} L</td><td class="num">{{ c.consumo_referencia_l100km | numero(1) }}</td></tr>
+          {% else %}<tr><td colspan="4" class="vacio">Sin camiones.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <details>
+      <summary>+ Agregar camión</summary>
+      <form class="formulario" method="post" action="/catalogo/camiones">
+        <div class="campo"><label for="patente">Patente</label><input id="patente" name="patente" required minlength="6" maxlength="15" placeholder="AB123CD"></div>
+        <div class="campo"><label for="marca">Marca</label><input id="marca" name="marca" required></div>
+        <div class="campo"><label for="modelo">Modelo</label><input id="modelo" name="modelo" required></div>
+        <div class="campo"><label for="capacidad">Tanque (litros)</label><input id="capacidad" name="capacidad_tanque_litros" type="number" step="1" min="1" required></div>
+        <div class="campo"><label for="referencia">Consumo de referencia (L/100km)</label><input id="referencia" name="consumo_referencia_l100km" type="number" step="0.1" min="0.1" required></div>
+        <div class="formulario__acciones"><button class="boton" type="submit">Guardar camión</button></div>
+      </form>
+    </details>
+  </section>
+
+  <section class="tarjeta tarjeta--acento">
+    <h2>Choferes</h2>
+    <div class="tabla-contenedor">
+      <table>
+        <thead><tr><th>Nombre</th><th>DNI</th></tr></thead>
+        <tbody>
+          {% for c in choferes %}<tr><td>{{ c.nombre }}</td><td>{{ c.dni }}</td></tr>
+          {% else %}<tr><td colspan="2" class="vacio">Sin choferes.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <details>
+      <summary>+ Agregar chofer</summary>
+      <form class="formulario" method="post" action="/catalogo/choferes">
+        <div class="campo"><label for="nombre">Nombre y apellido</label><input id="nombre" name="nombre" required></div>
+        <div class="campo"><label for="dni">DNI</label><input id="dni" name="dni" required inputmode="numeric"></div>
+        <div class="formulario__acciones"><button class="boton" type="submit">Guardar chofer</button></div>
+      </form>
+    </details>
+  </section>
+
+  <section class="tarjeta tarjeta--acento">
+    <h2>Clientes</h2>
+    <div class="tabla-contenedor">
+      <table>
+        <thead><tr><th>Razón social</th><th>CUIT</th><th>Localidad</th></tr></thead>
+        <tbody>
+          {% for c in clientes %}<tr><td>{{ c.razon_social }}</td><td>{{ c.cuit or "—" }}</td><td>{{ c.localidad or "—" }}</td></tr>
+          {% else %}<tr><td colspan="3" class="vacio">Sin clientes.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <details>
+      <summary>+ Agregar cliente</summary>
+      <form class="formulario" method="post" action="/catalogo/clientes">
+        <div class="campo campo--ancho"><label for="razon_social">Razón social</label><input id="razon_social" name="razon_social" required></div>
+        <div class="campo"><label for="cuit">CUIT</label><input id="cuit" name="cuit" placeholder="30-12345678-9"></div>
+        <div class="campo"><label for="localidad">Localidad</label><input id="localidad" name="localidad"></div>
+        <div class="formulario__acciones"><button class="boton" type="submit">Guardar cliente</button></div>
+      </form>
+    </details>
+  </section>
+
+  <section class="tarjeta tarjeta--acento">
+    <h2>Productos</h2>
+    <div class="tabla-contenedor">
+      <table>
+        <thead><tr><th>Producto</th><th>Unidad</th></tr></thead>
+        <tbody>
+          {% for p in productos %}<tr><td>{{ p.nombre }}</td><td>{{ p.unidad }}</td></tr>
+          {% else %}<tr><td colspan="2" class="vacio">Sin productos.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <details>
+      <summary>+ Agregar producto</summary>
+      <form class="formulario" method="post" action="/catalogo/productos">
+        <div class="campo"><label for="nombre_producto">Nombre</label><input id="nombre_producto" name="nombre" required placeholder="Cal viva"></div>
+        <div class="campo"><label for="unidad">Unidad</label><input id="unidad" name="unidad" value="tn" required></div>
+        <div class="formulario__acciones"><button class="boton" type="submit">Guardar producto</button></div>
+      </form>
+    </details>
+  </section>
+</div>
+{% endblock %}

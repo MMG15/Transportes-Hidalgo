@@ -1,6 +1,25 @@
-# Gestión de Flota
+<p align="center"><img src="src/flota/marca/img/logo-hidalgo.png" alt="Transportes Hidalgo" height="80"></p>
+
+# Transportes Hidalgo · Gestión de Flota
 
 Control de viajes de camiones (distribución de cal y otros productos) y del **consumo de combustible por viaje**.
+
+- **Panel web** en http://127.0.0.1:8000 — tablero, viajes, combustible, reportes y catálogo.
+- **API REST** en http://127.0.0.1:8000/docs
+- **Reportes Excel** con la identidad de la empresa.
+- Historial de cada sesión de trabajo en [`docs/sesiones/`](docs/sesiones/).
+
+## Paleta de marca
+
+| Color | Hex | Uso |
+|---|---|---|
+| Azul Hidalgo | `#0706E5` | Botones, encabezados de tabla, acentos principales |
+| Azul oscuro | `#06057F` | Barra de navegación y títulos |
+| Naranja Hidalgo | `#F56A11` | Acentos, franja del encabezado, alertas |
+| Naranja oscuro | `#B84A06` | Texto naranja legible sobre blanco |
+
+Definida en un único lugar: [`src/flota/marca/__init__.py`](src/flota/marca/__init__.py). La usan el CSS del panel
+(se inyecta como variables CSS) y el generador de Excel.
 
 ## Arquitectura limpia
 
@@ -21,7 +40,9 @@ src/flota/
 │   └── excel/             Generador del reporte Excel
 ├── presentation/      Entradas al sistema.
 │   ├── api/               API REST (FastAPI)
+│   ├── web/               Panel web (Jinja2 + CSS con la paleta de marca)
 │   └── cli.py             Comandos de consola (automatización)
+├── marca/             Colores y logos de Transportes Hidalgo
 └── bootstrap.py       Raíz de composición: conecta puertos con adaptadores
 ```
 
@@ -36,7 +57,7 @@ uv sync                         # instala dependencias en .venv
 uv run flota crear-db           # crea la base 'flota' en PostgreSQL
 uv run alembic upgrade head     # crea las tablas
 uv run flota datos-demo         # (opcional) datos de ejemplo
-uv run flota servidor           # API en http://127.0.0.1:8000/docs
+uv run flota servidor           # panel en http://127.0.0.1:8000 · API en /docs
 ```
 
 ## Comandos
@@ -59,10 +80,10 @@ y números en formato argentino (`1.234,56`). Reimportar un archivo no duplica c
 
 ```powershell
 # Importar cada hora lo que deje la tarjeta de combustible en la carpeta 'entrada'
-schtasks /Create /TN "Flota - Importar" /SC HOURLY /TR "cmd /c cd /d C:\Users\Usuario\proyectos\gestion-flota && uv run flota importar-carpeta entrada --origen tarjeta"
+schtasks /Create /TN "Flota - Importar" /SC HOURLY /TR "cmd /c cd /d C:\Users\Usuario\OneDrive\Documentos\Transportes-Hidalgo && uv run flota importar-carpeta entrada --origen tarjeta"
 
 # Reporte diario a las 7:00
-schtasks /Create /TN "Flota - Reporte" /SC DAILY /ST 07:00 /TR "cmd /c cd /d C:\Users\Usuario\proyectos\gestion-flota && uv run flota exportar"
+schtasks /Create /TN "Flota - Reporte" /SC DAILY /ST 07:00 /TR "cmd /c cd /d C:\Users\Usuario\OneDrive\Documentos\Transportes-Hidalgo && uv run flota exportar"
 ```
 
 ## Cómo se calcula el consumo

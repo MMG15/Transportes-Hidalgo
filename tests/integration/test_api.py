@@ -2,32 +2,9 @@
 
 from io import BytesIO
 
-import pytest
-from fastapi.testclient import TestClient
 from openpyxl import Workbook, load_workbook
-from sqlalchemy import create_engine
-from sqlalchemy.pool import StaticPool
-
-from flota.infrastructure.db.models import Base
-from flota.infrastructure.db.session import crear_session_factory
-from flota.infrastructure.db.unidad_de_trabajo import UnidadDeTrabajoSql
-from flota.presentation.api.app import create_app
-from flota.presentation.api.dependencias import obtener_uow
 
 API = "/api/v1"
-
-
-@pytest.fixture
-def cliente():
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    Base.metadata.create_all(engine)
-    factory = crear_session_factory(engine)
-    app = create_app()
-    app.dependency_overrides[obtener_uow] = lambda: UnidadDeTrabajoSql(factory)
-    with TestClient(app) as c:
-        yield c
 
 
 def crear(cliente, ruta, datos):
@@ -141,8 +118,29 @@ def test_flujo_completo(cliente):
         },
     )
     assert excel.status_code == 200
-    hoja = load_workbook(BytesIO(excel.content)).active
-    assert hoja["D2"].value == "AB123CD"
+    libro = load_workbook(BytesIO(excel.content))
+    assert libro.sheetnames == ["Resumen por camión", "Consumo por viaje"]
+    resumen = libro["Resumen por camión"]
+    assert len(resumen._images) == 1  # logo de la empresa
+    assert resumen["A10"].value == "AB123CD"  # la tabla empieza debajo de la portada
+    assert libro["Consumo por viaje"]["D2"].value == "AB123CD"
+
+
+def test_listados_del_catalogo(cliente):
+    """Regresión: los listados ordenados por columna fallaban (bug de la sesión 1)."""
+    for ruta, datos in [
+        ("camiones", {
+            "patente": "AB123CD", "marca": "Scania", "modelo": "R450",
+            "capacidad_tanque_litros": 600, "consumo_referencia_l100km": 38,
+        }),
+        ("choferes", {"nombre": "Juan Pérez", "dni": "30123456"}),
+        ("clientes", {"razon_social": "Agropecuaria San José"}),
+        ("productos", {"nombre": "Cal viva"}),
+    ]:  # fmt: skip
+        crear(cliente, ruta, datos)
+        respuesta = cliente.get(f"{API}/{ruta}")
+        assert respuesta.status_code == 200, ruta
+        assert len(respuesta.json()) == 1
 
 
 def test_recurso_inexistente_devuelve_404(cliente):

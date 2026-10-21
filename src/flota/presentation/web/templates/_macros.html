@@ -1,0 +1,70 @@
+{# Piezas reutilizables entre páginas #}
+
+{% macro estado(fila) -%}
+  <span class="etiqueta etiqueta--{{ fila.estado }}">{{ "En curso" if fila.estado == "en_curso" else "Finalizado" }}</span>
+  {%- if fila.alerta %} <span class="etiqueta etiqueta--alerta" title="Consumo por encima del umbral">⚠ Alerta</span>{% endif %}
+{%- endmacro %}
+
+{% macro desvio(valor) -%}
+  {%- if valor is none -%}—{%- else -%}{{ "+" if valor > 0 else "" }}{{ valor | numero(1) }} %{%- endif -%}
+{%- endmacro %}
+
+{% macro indicadores(ind, dias=None) %}
+<section class="indicadores" aria-label="Indicadores">
+  <div class="indicador">
+    <p class="indicador__etiqueta">Viajes</p>
+    <p class="indicador__valor">{{ ind.viajes }}</p>
+  </div>
+  <div class="indicador">
+    <p class="indicador__etiqueta">Kilómetros recorridos</p>
+    <p class="indicador__valor">{{ ind.km | numero(0) }} <span class="indicador__unidad">km</span></p>
+  </div>
+  <div class="indicador">
+    <p class="indicador__etiqueta">Combustible cargado</p>
+    <p class="indicador__valor">{{ ind.litros | numero(0) }} <span class="indicador__unidad">L</span></p>
+  </div>
+  <div class="indicador">
+    <p class="indicador__etiqueta">Consumo promedio</p>
+    <p class="indicador__valor">{{ ind.consumo | numero(1) }} <span class="indicador__unidad">L/100km</span></p>
+  </div>
+  <div class="indicador">
+    <p class="indicador__etiqueta">Costo de combustible</p>
+    <p class="indicador__valor">{{ ind.costo | moneda }}</p>
+  </div>
+  <div class="indicador indicador--alerta">
+    <p class="indicador__etiqueta">⚠ Viajes con alerta</p>
+    <p class="indicador__valor">{{ ind.alertas }}</p>
+  </div>
+</section>
+{% endmacro %}
+
+{% macro tabla_resumen(resumen) %}
+<div class="tabla-contenedor">
+  <table>
+    <thead>
+      <tr>
+        <th>Patente</th><th class="num">Viajes</th><th class="num">Km</th><th class="num">Litros</th>
+        <th class="num">Costo</th><th class="num">L/100km</th><th class="num">Referencia</th>
+        <th class="num">Desvío</th><th class="num">Alertas</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in resumen %}
+      <tr{% if r.viajes_con_alerta %} class="fila-alerta"{% endif %}>
+        <td><strong>{{ r.patente }}</strong></td>
+        <td class="num">{{ r.viajes }}</td>
+        <td class="num">{{ r.km_recorridos | numero(0) }}</td>
+        <td class="num">{{ r.litros | numero(1) }}</td>
+        <td class="num">{{ r.costo | moneda }}</td>
+        <td class="num">{{ r.consumo_promedio_l100km | numero(1) }}</td>
+        <td class="num">{{ r.consumo_referencia_l100km | numero(1) }}</td>
+        <td class="num">{{ desvio(r.desvio_pct) }}</td>
+        <td class="num">{% if r.viajes_con_alerta %}⚠ {{ r.viajes_con_alerta }}{% else %}0{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="vacio">No hay viajes en el período.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}

@@ -1,0 +1,163 @@
+/* Transportes Hidalgo — estilos del panel.
+   Los colores (--azul, --naranja, ...) se definen en src/flota/marca/__init__.py
+   y se inyectan como variables CSS en templates/base.html. */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+:root {
+  --radio: 10px;
+  --sombra: 0 1px 2px rgb(22 23 43 / 6%), 0 4px 16px rgb(22 23 43 / 6%);
+  --fuente: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--fuente);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--texto);
+  background: var(--fondo);
+}
+
+a { color: var(--azul); }
+h1, h2, h3 { color: var(--azul-oscuro); line-height: 1.2; margin: 0 0 .75rem; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.15rem; }
+
+/* ---------- Encabezado ---------- */
+.encabezado { background: var(--superficie); border-bottom: 4px solid var(--naranja); }
+.encabezado__contenido {
+  max-width: 1280px; margin: 0 auto; padding: 12px 16px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.marca__logo { height: 44px; width: auto; display: block; }
+.marca__subtitulo {
+  color: var(--texto-suave); font-size: .9rem;
+  border-left: 2px solid var(--borde); padding-left: 16px;
+}
+
+.menu { background: var(--azul-oscuro); }
+.menu__lista {
+  max-width: 1280px; margin: 0 auto; padding: 0 16px;
+  display: flex; gap: 4px; overflow-x: auto; list-style: none;
+}
+.menu__item {
+  display: block; padding: 12px 14px; color: #fff; text-decoration: none;
+  font-weight: 600; white-space: nowrap; border-bottom: 3px solid transparent;
+}
+.menu__item:hover { background: rgb(255 255 255 / 8%); }
+.menu__item--activo { border-bottom-color: var(--naranja); }
+.menu__item--secundario { margin-left: auto; font-weight: 400; opacity: .85; }
+
+/* ---------- Contenido ---------- */
+.contenido { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+.titulo-pagina {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.titulo-pagina h1 { margin: 0; }
+.titulo-pagina p { margin: 4px 0 0; color: var(--texto-suave); }
+
+.tarjeta {
+  background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: var(--radio); box-shadow: var(--sombra);
+  padding: 20px; margin-bottom: 20px; min-width: 0;
+}
+.tarjeta--acento { border-top: 4px solid var(--azul); }
+
+.grilla { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); }
+.grilla > .tarjeta { margin-bottom: 0; }
+.grilla + .tarjeta, .grilla + .grilla { margin-top: 20px; }
+
+/* ---------- Indicadores ---------- */
+.indicadores {
+  display: grid; gap: 16px; margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+}
+.indicador {
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
+  box-shadow: var(--sombra); padding: 16px 18px; border-left: 4px solid var(--azul);
+}
+.indicador--alerta { border-left-color: var(--naranja); }
+.indicador__etiqueta { color: var(--texto-suave); font-size: .85rem; margin: 0; }
+.indicador__valor {
+  margin: 4px 0 0; font-size: 1.6rem; font-weight: 700; color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+.indicador__unidad { font-size: .9rem; font-weight: 400; color: var(--texto-suave); }
+
+/* ---------- Tablas ---------- */
+.tabla-contenedor { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th {
+  text-align: left; background: var(--azul-claro); color: var(--azul-oscuro);
+  font-weight: 600; padding: 10px 12px; white-space: nowrap;
+}
+td { padding: 9px 12px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.fila-alerta td { background: var(--naranja-claro); }
+.vacio { color: var(--texto-suave); text-align: center; padding: 24px; }
+
+/* ---------- Etiquetas de estado (siempre con texto, nunca sólo color) ---------- */
+.etiqueta {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px;
+  border-radius: 999px; font-size: .8rem; font-weight: 600; white-space: nowrap;
+}
+.etiqueta--en_curso { background: var(--azul-claro); color: var(--azul-oscuro); }
+.etiqueta--finalizado { background: var(--fondo); color: var(--texto-suave); border: 1px solid var(--borde); }
+.etiqueta--alerta { background: var(--naranja-claro); color: var(--naranja-oscuro); }
+.etiqueta--origen { background: var(--fondo); color: var(--texto-suave); }
+
+/* ---------- Formularios ---------- */
+.formulario { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); }
+.formulario--linea { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.campo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.campo--ancho { grid-column: 1 / -1; }
+label { font-size: .85rem; font-weight: 600; color: var(--texto-suave); }
+input, select, textarea {
+  font: inherit; color: var(--texto); background: var(--superficie);
+  border: 1px solid var(--borde); border-radius: 8px; padding: 8px 10px; width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--azul); outline-offset: 1px; border-color: var(--azul);
+}
+.formulario__acciones { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.boton {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font: inherit; font-weight: 600; padding: 9px 18px; border-radius: 8px;
+  border: 2px solid var(--azul); background: var(--azul); color: #fff;
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+}
+.boton:hover { background: var(--azul-oscuro); border-color: var(--azul-oscuro); }
+.boton--acento { background: var(--superficie); color: var(--naranja-oscuro); border-color: var(--naranja); }
+.boton--acento:hover { background: var(--naranja-claro); border-color: var(--naranja); }
+.boton--chico { padding: 5px 12px; font-size: .85rem; }
+
+details > summary { cursor: pointer; font-weight: 600; color: var(--azul); }
+details[open] > summary { margin-bottom: 12px; }
+
+/* ---------- Avisos ---------- */
+.aviso { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid; }
+.aviso--ok { background: var(--exito-claro); border-color: var(--exito); color: var(--exito); }
+.aviso--error { background: var(--error-claro); border-color: var(--error); color: var(--error); }
+.aviso--info { background: var(--azul-claro); border-color: var(--azul); color: var(--azul-oscuro); }
+.aviso ul { margin: 8px 0 0; padding-left: 20px; }
+
+/* ---------- Pie ---------- */
+.pie {
+  text-align: center; color: var(--texto-suave); font-size: .85rem; padding: 24px 16px;
+  border-top: 1px solid var(--borde);
+}
+.pie img { height: 22px; vertical-align: middle; margin-right: 6px; }
+
+@media (max-width: 640px) {
+  .marca__subtitulo { display: none; }
+  .marca__logo { height: 36px; }
+  h1 { font-size: 1.35rem; }
+  .indicador__valor { font-size: 1.3rem; }
+  .menu__item--secundario { margin-left: 0; }
+}

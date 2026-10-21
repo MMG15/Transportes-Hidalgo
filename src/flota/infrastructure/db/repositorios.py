@@ -47,6 +47,8 @@ class _RepositorioSql[E, M]:
 
     entidad: ClassVar[type]
     modelo: ClassVar[type]
+    # Debe ser una expresión (.asc() / .desc()), no la columna sola: una columna es un
+    # descriptor y, leída como self.orden, SQLAlchemy intentaría resolverla sobre el repositorio.
     orden: ClassVar[Any]
 
     def __init__(self, session: Session) -> None:
@@ -79,7 +81,7 @@ class _RepositorioSql[E, M]:
 
 
 class RepositorioCamionesSql(_RepositorioSql[Camion, CamionModel], RepositorioCamiones):
-    entidad, modelo, orden = Camion, CamionModel, CamionModel.patente
+    entidad, modelo, orden = Camion, CamionModel, CamionModel.patente.asc()
 
     def obtener_por_patente(self, patente: str) -> Camion | None:
         patente = normalizar_patente(patente)
@@ -87,18 +89,18 @@ class RepositorioCamionesSql(_RepositorioSql[Camion, CamionModel], RepositorioCa
 
 
 class RepositorioChoferesSql(_RepositorioSql[Chofer, ChoferModel], RepositorioChoferes):
-    entidad, modelo, orden = Chofer, ChoferModel, ChoferModel.nombre
+    entidad, modelo, orden = Chofer, ChoferModel, ChoferModel.nombre.asc()
 
     def obtener_por_dni(self, dni: str) -> Chofer | None:
         return self._uno(select(ChoferModel).where(ChoferModel.dni == dni))
 
 
 class RepositorioClientesSql(_RepositorioSql[Cliente, ClienteModel], RepositorioClientes):
-    entidad, modelo, orden = Cliente, ClienteModel, ClienteModel.razon_social
+    entidad, modelo, orden = Cliente, ClienteModel, ClienteModel.razon_social.asc()
 
 
 class RepositorioProductosSql(_RepositorioSql[Producto, ProductoModel], RepositorioProductos):
-    entidad, modelo, orden = Producto, ProductoModel, ProductoModel.nombre
+    entidad, modelo, orden = Producto, ProductoModel, ProductoModel.nombre.asc()
 
     def obtener_por_nombre(self, nombre: str) -> Producto | None:
         return self._uno(select(ProductoModel).where(ProductoModel.nombre == nombre.strip()))

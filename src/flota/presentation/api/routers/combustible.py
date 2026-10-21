@@ -1,7 +1,4 @@
-import shutil
-import tempfile
 from datetime import date, datetime, time, timedelta
-from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile
@@ -11,11 +8,10 @@ from flota.application.use_cases.combustible import (
     DatosCarga,
     RegistrarCargaCombustible,
 )
-from flota.application.use_cases.importacion import ImportarCargas
 from flota.domain.entities import OrigenDato
-from flota.infrastructure.importacion import lector_para_archivo
 from flota.presentation.api.dependencias import Config, UoW
 from flota.presentation.api.schemas import CargaCrear, CargaLeer, ResultadoImportacionLeer
+from flota.presentation.archivos import importar_subida
 
 router = APIRouter(prefix="/cargas", tags=["Combustible"])
 
@@ -48,16 +44,10 @@ def importar_cargas(
     archivo: UploadFile, uow: UoW, config: Config, origen: OrigenDato = OrigenDato.EXCEL
 ):
     """Sube un Excel (.xlsx) o CSV (tarjeta de combustible) con cargas."""
-    extension = Path(archivo.filename or "").suffix.lower()
     try:
-        lector = lector_para_archivo(Path(f"archivo{extension}"))
+        resultado = importar_subida(
+            uow, archivo.file, archivo.filename or "", origen, config.tolerancia_tanque_pct
+        )
     except ValueError as error:
         raise HTTPException(status_code=415, detail=str(error)) from error
-
-    # Se guarda en un archivo temporal porque los lectores trabajan con rutas.
-    with tempfile.TemporaryDirectory() as carpeta:
-        ruta = Path(carpeta) / f"importacion{extension}"
-        with ruta.open("wb") as destino:
-            shutil.copyfileobj(archivo.file, destino)
-        resultado = ImportarCargas(uow, lector, origen, config.tolerancia_tanque_pct).ejecutar(ruta)
     return ResultadoImportacionLeer.model_validate(resultado)

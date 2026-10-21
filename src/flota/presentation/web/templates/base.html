@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}{% endblock %} · {{ empresa }}</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+  {# Paleta de marca: viene de src/flota/marca/__init__.py #}
+  <style>:root { {% for nombre, valor in colores.items() %}--{{ nombre }}: {{ valor }}; {% endfor %}}</style>
+  <link rel="stylesheet" href="/static/css/hidalgo.css">
+</head>
+<body>
+  <header>
+    <div class="encabezado">
+      <div class="encabezado__contenido">
+        <a href="/" aria-label="Inicio"><img class="marca__logo" src="/static/img/logo-hidalgo.png" alt="{{ empresa }}"></a>
+        <span class="marca__subtitulo">Gestión de flota y combustible</span>
+      </div>
+    </div>
+    <nav class="menu" aria-label="Principal">
+      <ul class="menu__lista">
+        {% for ruta, texto in menu %}
+        <li><a class="menu__item{% if seccion == ruta %} menu__item--activo{% endif %}" href="{{ ruta }}"
+               {% if seccion == ruta %}aria-current="page"{% endif %}>{{ texto }}</a></li>
+        {% endfor %}
+        <li class="menu__item--secundario"><a class="menu__item" href="/docs">API</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="contenido">
+    {% if request.query_params.get("ok") %}
+      <div class="aviso aviso--ok" role="status">✔ {{ request.query_params.get("ok") }}</div>
+    {% endif %}
+    {% if request.query_params.get("error") %}
+      <div class="aviso aviso--error" role="alert">✖ {{ request.query_params.get("error") }}</div>
+    {% endif %}
+    {% block contenido %}{% endblock %}
+  </main>
+
+  <footer class="pie">
+    <img src="/static/img/isotipo-hidalgo.png" alt="">© {{ anio }} {{ empresa }}
+  </footer>
+</body>
+</html>

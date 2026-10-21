@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block titulo %}Combustible{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Combustible</h1>
+    <p>Cada carga se asigna sola al viaje que el camión tenía en curso en esa fecha.</p>
+  </div>
+</div>
+
+{% if resultado %}
+<div class="aviso {{ 'aviso--error' if resultado.errores else 'aviso--ok' }}" role="status">
+  <strong>{{ nombre_archivo }}</strong>: {{ resultado.importadas }} importadas,
+  {{ resultado.duplicadas }} ya existían, {{ resultado.errores | length }} con error
+  (de {{ resultado.procesadas }} filas).
+  {% if resultado.errores %}<ul>{% for e in resultado.errores %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}
+
+<div class="grilla">
+  <section class="tarjeta tarjeta--acento">
+    <h2>Importar planilla o archivo de tarjeta</h2>
+    <form class="formulario" method="post" action="/combustible/importar" enctype="multipart/form-data">
+      <div class="campo campo--ancho"><label for="archivo">Archivo (.xlsx o .csv)</label><input id="archivo" name="archivo" type="file" accept=".xlsx,.xlsm,.csv,.txt" required></div>
+      <div class="campo"><label for="origen">Origen</label>
+        <select id="origen" name="origen"><option value="excel">Planilla Excel</option><option value="tarjeta">Tarjeta de combustible</option></select></div>
+      <div class="formulario__acciones">
+        <button class="boton" type="submit">Importar</button>
+        <a class="boton boton--acento" href="/api/v1/plantillas/importacion.xlsx">Descargar plantilla</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="tarjeta tarjeta--acento">
+    <h2>Registrar una carga</h2>
+    {% if not camiones %}
+      <div class="aviso aviso--info">Primero cargá un camión en <a href="/catalogo">Flota y clientes</a>.</div>
+    {% else %}
+    <form class="formulario" method="post" action="/combustible">
+      <div class="campo"><label for="camion_id">Camión</label>
+        <select id="camion_id" name="camion_id" required>{% for c in camiones %}<option value="{{ c.id }}">{{ c.patente }}</option>{% endfor %}</select></div>
+      <div class="campo"><label for="fecha">Fecha y hora</label><input id="fecha" name="fecha" type="datetime-local" value="{{ ahora | fecha_input }}" required></div>
+      <div class="campo"><label for="litros">Litros</label><input id="litros" name="litros" type="number" step="0.01" min="0.01" required></div>
+      <div class="campo"><label for="precio_litro">Precio por litro ($)</label><input id="precio_litro" name="precio_litro" type="number" step="0.01" min="0"></div>
+      <div class="campo"><label for="odometro_km">Odómetro (km)</label><input id="odometro_km" name="odometro_km" type="number" step="0.1" min="0"></div>
+      <div class="campo"><label for="estacion">Estación</label><input id="estacion" name="estacion"></div>
+      <div class="campo"><label for="referencia_externa">Nro. de ticket</label><input id="referencia_externa" name="referencia_externa"></div>
+      <div class="formulario__acciones"><button class="boton" type="submit">Registrar carga</button></div>
+    </form>
+    {% endif %}
+  </section>
+</div>
+
+<section class="tarjeta">
+  <h2>Últimas 50 cargas</h2>
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr><th>Fecha</th><th>Patente</th><th class="num">Litros</th><th class="num">Precio/L</th><th class="num">Importe</th><th>Estación</th><th>Ticket</th><th>Origen</th><th>Viaje</th></tr>
+      </thead>
+      <tbody>
+        {% for c in cargas %}
+        <tr>
+          <td>{{ c.fecha | fecha }}</td>
+          <td><strong>{{ patentes.get(c.camion_id, "—") }}</strong></td>
+          <td class="num">{{ c.litros | numero(2) }}</td>
+          <td class="num">{{ c.precio_litro | moneda }}</td>
+          <td class="num">{{ c.importe | moneda }}</td>
+          <td>{{ c.estacion or "—" }}</td>
+          <td>{{ c.referencia_externa or "—" }}</td>
+          <td><span class="etiqueta etiqueta--origen">{{ c.origen }}</span></td>
+          <td>{% if c.viaje_id %}✔ Asignada{% else %}<span style="color:var(--texto-suave)">Sin viaje</span>{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="vacio">Todavía no hay cargas registradas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

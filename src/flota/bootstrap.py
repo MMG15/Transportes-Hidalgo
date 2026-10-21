@@ -10,6 +10,7 @@ from functools import lru_cache
 
 from sqlalchemy.orm import Session, sessionmaker
 
+from flota import marca
 from flota.application.ports import GeneradorReporte, UnidadDeTrabajo
 from flota.infrastructure.db.session import crear_engine, crear_session_factory
 from flota.infrastructure.db.unidad_de_trabajo import UnidadDeTrabajoSql
@@ -26,4 +27,4 @@ def crear_uow() -> UnidadDeTrabajo:
 
 
 def crear_generador_reporte() -> GeneradorReporte:
-    return GeneradorReporteExcel()
+    return GeneradorReporteExcel(logo=marca.LOGO)
