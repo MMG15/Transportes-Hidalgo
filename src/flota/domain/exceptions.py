@@ -1,0 +1,21 @@
+"""Errores del negocio. Las capas externas los traducen (p. ej. a códigos HTTP)."""
+
+
+class ErrorDominio(Exception):
+    """Base de todos los errores de negocio."""
+
+
+class DatosInvalidos(ErrorDominio):
+    """Un dato no cumple el formato o rango esperado."""
+
+
+class NoEncontrado(ErrorDominio):
+    """El recurso solicitado no existe."""
+
+
+class Duplicado(ErrorDominio):
+    """El recurso ya existe."""
+
+
+class ReglaNegocioViolada(ErrorDominio):
+    """La operación no está permitida por una regla del negocio."""

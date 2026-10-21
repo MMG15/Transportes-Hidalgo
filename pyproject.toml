@@ -1,0 +1,50 @@
+[project]
+name = "gestion-flota"
+version = "0.1.0"
+description = "Gestión de flota de camiones y control de consumo de combustible por viaje"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy>=2.0.36",
+    "psycopg[binary]>=3.2",
+    "alembic>=1.14",
+    "pydantic-settings>=2.6",
+    "openpyxl>=3.1.5",
+    "typer>=0.15",
+    "python-multipart>=0.0.20",
+]
+
+[project.scripts]
+flota = "flota.presentation.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "httpx>=0.28",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/flota"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+filterwarnings = [
+    # SQLite (usado sólo en tests) no maneja Decimal nativamente; PostgreSQL sí.
+    "ignore:Dialect sqlite\\+pysqlite does \\*not\\* support Decimal:sqlalchemy.exc.SAWarning",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["migrations/versions"]  # código generado por Alembic
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
