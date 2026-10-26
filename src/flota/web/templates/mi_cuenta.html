@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block titulo %}Mi cuenta{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Mi cuenta</h1>
+    <p>{{ usuario.nombre }} · {{ usuario.email }} · {{ usuario.nombre_rol }}</p>
+  </div>
+</div>
+<section class="tarjeta tarjeta--acento login">
+  <h2>Cambiar contraseña</h2>
+  <form class="formulario" method="post" action="/mi-cuenta">
+    <div class="campo campo--ancho"><label for="actual">Contraseña actual</label><input id="actual" name="actual" type="password" autocomplete="current-password" required></div>
+    <div class="campo campo--ancho"><label for="nueva">Nueva (mínimo 8 caracteres)</label><input id="nueva" name="nueva" type="password" minlength="8" autocomplete="new-password" required></div>
+    <div class="formulario__acciones"><button class="boton" type="submit">Guardar</button></div>
+  </form>
+</section>
+{% endblock %}

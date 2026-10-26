@@ -55,6 +55,7 @@ Transportes-Hidalgo/
     ├── alertas/          MOD-05 Alertas con estado y resolución; reaccionan a eventos
     ├── monedas/          MOD-10 Tipo de cambio CLP → ARS y conversión de gastos
     ├── reportes/         MOD-12 Tablero, reportes y Excel (sólo lectura)
+    ├── usuarios/         MOD-13 Usuarios, roles, permisos, login y auditoría
     ├── web/              Plantillas, estilos y utilidades del panel
     ├── marca/            Colores y logos de la empresa
     ├── bootstrap.py      Raíz de composición: elige las implementaciones concretas
@@ -471,6 +472,57 @@ El borrador automático **siempre se revisa**. En la Sesión 4 hubo que reescrib
 [cli.py](../src/flota/cli.py): los type hints generan argumentos, `--help` y validación. Cada
 `@app.command()` es un subcomando (`flota importar`, `flota exportar`, `flota datos-demo`, …).
 
+### 4.8 Seguridad: contraseñas, sesiones y permisos (RF-53, RNF-03)
+
+**Contraseñas — `argon2-cffi`** ([usuarios/infrastructure/repositorios.py](../src/flota/usuarios/infrastructure/repositorios.py)):
+nunca se guarda la contraseña, sólo su **hash** Argon2: una "huella" irreversible que incluye una
+sal aleatoria. Para verificar, se vuelve a calcular y se compara. Argon2 es lento a propósito: probar
+millones de contraseñas lleva demasiado tiempo. El dominio no sabe qué algoritmo se usa: depende del
+puerto `HasherContrasenas` (en los tests se usa `HasherFake`, instantáneo).
+
+**Sesión del panel — `SessionMiddleware` + `itsdangerous`** ([main.py](../src/flota/main.py)):
+un *middleware* es código que envuelve TODOS los pedidos. Éste guarda `request.session` en una
+cookie **firmada** con `SECRET_KEY`: el navegador la ve pero no puede cambiarla sin invalidar la
+firma. `same_site="lax"` evita que otro sitio envíe formularios con la sesión del usuario (CSRF).
+
+**Token de la API** ([usuarios/presentation/seguridad.py](../src/flota/usuarios/presentation/seguridad.py)):
+`POST /api/v1/auth/token` devuelve un texto firmado con `URLSafeTimedSerializer` que vence en 12 h;
+se envía como `Authorization: Bearer <token>`.
+
+**Permisos — dependencias de FastAPI:**
+
+```python
+router = APIRouter(dependencies=requiere(Modulo.COMBUSTIBLE))   # todo el router
+
+class Permiso:
+    def __call__(self, request: Request, usuario: UsuarioActual) -> Usuario:   # un objeto "llamable"
+        nivel = Nivel.LECTURA if request.method in METODOS_DE_LECTURA else Nivel.ESCRITURA
+        usuario.exigir(self.modulo, nivel)
+```
+
+- Una clase con `__call__` se usa como función: `Permiso(Modulo.X)` **configura** la dependencia y
+  FastAPI la **llama** en cada pedido.
+- Las dependencias se encadenan: `Permiso` necesita `usuario_actual`, que necesita la unidad de
+  trabajo. FastAPI resuelve el árbol y **reutiliza** cada dependencia dentro del mismo pedido: por eso
+  `usuario_actual` puede fijar `uow.actor` y el caso de uso de la ruta usa esa misma unidad de trabajo.
+- La matriz de permisos está en el **dominio** ([usuarios/domain/entidades.py](../src/flota/usuarios/domain/entidades.py), `PERMISOS`):
+  GET exige lectura; POST/PUT, escritura.
+- `NoAutenticado` → 401 en la API y redirección a `/login` en el panel; `SinPermiso` → 403.
+
+### 4.9 HTMX — actualizar partes de la página sin JavaScript propio
+
+En [_fila_alerta.html](../src/flota/web/templates/_fila_alerta.html):
+
+```html
+<form method="post" action="/alertas/{{ a.id }}"
+      hx-post="/alertas/{{ a.id }}" hx-target="closest tr" hx-swap="outerHTML">
+```
+
+HTMX (una librería de 14 KB) lee los atributos `hx-*`: envía el formulario por detrás y reemplaza
+**sólo la fila** con el HTML que devuelve el servidor. La ruta detecta el encabezado `HX-Request`
+y responde con el fragmento (`fragmento(...)`); sin HTMX, el mismo formulario funciona con
+Post/Redirect/Get. Es la decisión 4.1 del análisis de brechas: interactividad sin React.
+
 ---
 
 ## 5. Arquitectura limpia y patrones de diseño
@@ -511,6 +563,8 @@ testea sin base de datos y se puede cambiar de tecnología tocando sólo `infras
 | **Objeto de valor** | `Dinero`, `ImporteGasto`, `Referencia` | Se define por su valor, no por un id; inmutable. |
 | **Evento de dominio** | `ViajeFinalizado`, `CargaRegistrada` | "Algo pasó"; quien lo publica no sabe quién lo escucha. |
 | **Observador / bus de eventos** | `BusEventos`, `alertas/application/manejadores.py` | Los módulos reaccionan a eventos de otros sin depender de ellos. |
+| **Contexto de la operación (actor)** | `uow.actor`, `uow.auditar(...)` | Quién opera viaja con la unidad de trabajo: la auditoría lo registra sin pasarlo por parámetro. |
+| **Middleware** | `SessionMiddleware` | Código que envuelve todos los pedidos (sesión). |
 
 ### Eventos: cómo un módulo reacciona a otro sin depender de él
 
@@ -589,11 +643,16 @@ uv run pytest -x -v        # detenerse en el primer fallo, con detalle
 
 ## 8. Ejecutar el proyecto en local
 
-**Con PostgreSQL** (requiere `DB_PASSWORD` en `.env`):
+Desde la Sesión 6 el panel pide **usuario y contraseña**. Para empezar hay que crear el primer
+Administrador de sistema (`flota crear-usuario`), o cargar los datos de ejemplo, que traen un
+usuario por rol con la contraseña `demo1234` (`admin@hidalgo.demo`, `gerencia@hidalgo.demo`, …).
+
+**Con PostgreSQL** (requiere `DB_PASSWORD` y `SECRET_KEY` en `.env`):
 
 ```powershell
 uv run flota crear-db
 uv run alembic upgrade head
+uv run flota crear-usuario admin@empresa.com "Nombre"   # pide la contraseña (ROL-07)
 uv run flota datos-demo        # opcional: 2 camiones, 2 rutas, 8 viajes ida cargado / regreso vacío
 uv run flota servidor          # http://127.0.0.1:8000 · API en /docs
 ```
@@ -700,6 +759,11 @@ Reglas:
 | **Evento de dominio** | Aviso de algo que ocurrió en el negocio (`ViajeFinalizado`). |
 | **Bus de eventos** | Reparte cada evento a las funciones suscriptas. |
 | **Cotización** | Pesos argentinos por 1 peso chileno de un día (`TipoCambio`). |
+| **Hash** | Huella irreversible de un dato; así se guardan las contraseñas. |
+| **Middleware** | Código que se ejecuta en todos los pedidos HTTP (ej. la sesión). |
+| **Token** | Texto firmado que identifica al usuario en la API (`Bearer`). |
+| **401 / 403** | Sin identificar / identificado pero sin permiso. |
+| **Auditoría** | Registro de quién cambió qué, cuándo, antes y después (RF-55). |
 
 ---
 
@@ -714,9 +778,11 @@ Cada cambio del proyecto agrega una línea acá y, si introduce conceptos nuevos
 | 2026-10-26 | Incorporación del [documento de requisitos v1.1](requisitos_v1.1.md) y del [análisis de brechas](brechas-requisitos-v1.1.md). Sin cambios de código. | 1 |
 | 2026-10-26 | **Sesión 4**: código reorganizado por módulo; rutas y tramos cargado / vacío; referencia por ruta e histórico. Conceptos: `Protocol`, `@classmethod` fábrica, agregados, `relationship` con cascada, migración de datos con `batch_alter_table`, Object Mother. Guía reescrita con las rutas nuevas. | Todas |
 | 2026-10-26 | **Sesión 5**: módulos `monedas` (tipo de cambio, `Dinero`, `ImporteGasto`) y `alertas` (entidad con ciclo de vida, CU-06); eventos de dominio y bus. Conceptos: objetos de valor, métodos especiales, closures, `logging`, alias de tipos. | 1, 3.11–3.13, 5, 9, 12 |
+| 2026-10-26 | **Sesión 6**: módulo `usuarios` (roles ROL-01 a ROL-07, permisos por módulo, login, token de API) y auditoría (RF-55); HTMX en alertas. Conceptos: hash Argon2, middleware, cookies firmadas, dependencias encadenadas, objetos llamables (`__call__`). | 1, 4.8, 4.9, 5, 8, 12 |
 
 Notas por sesión: [01 · Base del sistema](sesiones/01-base-del-sistema.md) ·
 [02 · Marca y panel web](sesiones/02-marca-y-panel-web.md) ·
 [03 · Entorno local y documentación](sesiones/03-entorno-local-y-documentacion.md) ·
 [04 · Módulos, rutas y tramos](sesiones/04-modulos-rutas-y-tramos.md) ·
-[05 · Moneda, alertas y eventos](sesiones/05-moneda-alertas-y-eventos.md)
+[05 · Moneda, alertas y eventos](sesiones/05-moneda-alertas-y-eventos.md) ·
+[06 · Usuarios, roles y auditoría](sesiones/06-usuarios-roles-y-auditoria.md)

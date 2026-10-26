@@ -184,3 +184,10 @@ td .ayuda { margin: 0; font-size: .78rem; }
 .boton--peligro { background: var(--error); border-color: var(--error); }
 .boton--peligro:hover { background: var(--texto); border-color: var(--texto); }
 textarea { resize: vertical; }
+
+/* ---------- Sesión del usuario ---------- */
+.sesion { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sesion form { margin: 0; }
+.sesion__nombre { font-weight: 600; color: var(--azul-oscuro); }
+.login { max-width: 420px; margin: 40px auto; }
+.htmx-request { opacity: .6; }

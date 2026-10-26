@@ -13,6 +13,8 @@ from flota.catalogo.application.casos_de_uso import ConsultasCatalogo
 from flota.combustible.application.consumo import CalculadoraConsumo
 from flota.dependencias import Config, UoW
 from flota.reportes.application.casos_de_uso import GenerarReporteConsumo
+from flota.usuarios.domain.entidades import Modulo
+from flota.usuarios.presentation.seguridad import requiere
 from flota.viajes.application.casos_de_uso import (
     ActualizarRuta,
     CambiarEstadoCarga,
@@ -37,7 +39,7 @@ from flota.web.plantillas import (
     periodo,
 )
 
-router = APIRouter(include_in_schema=False)
+router = APIRouter(include_in_schema=False, dependencies=requiere(Modulo.VIAJES))
 
 IdOpcional = Annotated[str | None, Form()]  # los <select> opcionales mandan "" si no se elige
 

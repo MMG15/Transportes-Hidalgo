@@ -18,9 +18,12 @@ from flota.alertas.application import manejadores as alertas
 from flota.reportes.application.puertos import GeneradorReporte
 from flota.reportes.infrastructure.excel import GeneradorReporteExcel
 from flota.shared.application.eventos import BusEventos
+from flota.shared.domain.auditoria import SISTEMA, Actor
 from flota.shared.infrastructure.config import get_settings
 from flota.shared.infrastructure.db import crear_engine, crear_session_factory
 from flota.unidad_de_trabajo import UnidadDeTrabajoSistema, UnidadDeTrabajoSql
+from flota.usuarios.application.puertos import HasherContrasenas
+from flota.usuarios.infrastructure.repositorios import HasherArgon2
 
 
 @lru_cache
@@ -42,8 +45,14 @@ def _bus() -> BusEventos:
     return crear_bus(crear_uow)
 
 
-def crear_uow() -> UnidadDeTrabajoSistema:
-    return UnidadDeTrabajoSql(_session_factory(), _bus())
+def crear_uow(actor: Actor = SISTEMA) -> UnidadDeTrabajoSistema:
+    """`actor`: quién opera (para la auditoría). El panel y la API lo cambian al identificar
+    al usuario; la consola usa `CONSOLA`."""
+    return UnidadDeTrabajoSql(_session_factory(), _bus(), actor)
+
+
+def crear_hasher() -> HasherContrasenas:
+    return HasherArgon2()
 
 
 def crear_generador_reporte() -> GeneradorReporte:

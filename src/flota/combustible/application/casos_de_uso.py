@@ -14,6 +14,7 @@ from flota.combustible.domain.entidades import CargaCombustible, OrigenDato
 from flota.combustible.domain.eventos import CargaRegistrada
 from flota.monedas.application.casos_de_uso import importe_en_pesos
 from flota.shared.application.comun import obtener_o_fallar
+from flota.shared.domain.auditoria import AccionAuditoria
 from flota.shared.domain.dinero import Dinero, Moneda
 from flota.shared.domain.errores import DatosInvalidos, Duplicado
 
@@ -78,6 +79,7 @@ class RegistrarCargaCombustible:
                 carga.asignar_a_viaje(viaje)
 
             uow.cargas.guardar(carga)
+            uow.auditar("cargas_combustible", carga.id, AccionAuditoria.ALTA, despues=carga)
             uow.registrar_evento(CargaRegistrada(carga.id, carga.viaje_id))
             uow.commit()
         return carga

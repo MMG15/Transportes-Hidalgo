@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     db_password: str = ""
     db_name: str = "flota"
 
+    # Firma las cookies de sesión y los tokens de la API. Si queda vacía se genera una al
+    # arrancar (las sesiones se pierden al reiniciar). En producción: fijarla en .env.
+    secret_key: str = ""
+    cookies_seguras: bool = False  # True en producción (sólo HTTPS)
+    horas_sesion: int = 12
+
     umbral_desvio_pct: Decimal = Decimal("15")
     tolerancia_tanque_pct: Decimal = Decimal("5")
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -14,6 +15,7 @@ from flota.alertas.domain.eventos import AlertaEscalada, AlertaGenerada
 from flota.combustible.application.consumo import CalculadoraConsumo
 from flota.combustible.domain.consumo import ConsumoTramo, FuenteReferencia
 from flota.shared.application.comun import obtener_o_fallar
+from flota.shared.domain.auditoria import AccionAuditoria
 
 type Reloj = Callable[[], datetime]
 
@@ -149,10 +151,11 @@ class ResolverAlerta:
         alerta_id: UUID,
         accion: AccionAlerta,
         comentario: str,
-        usuario_id: UUID | None = None,
     ) -> Alerta:
         with self._uow as uow:
             alerta = obtener_o_fallar(uow.alertas, alerta_id, "alerta")
+            antes = replace(alerta)
+            usuario_id = uow.actor.usuario_id  # quién la resuelve (RF-20)
             ahora = self._ahora()
             match AccionAlerta(accion):
                 case AccionAlerta.EN_ANALISIS:
@@ -163,6 +166,7 @@ class ResolverAlerta:
                     alerta.confirmar_desvio(comentario, ahora, usuario_id)
                     uow.registrar_evento(AlertaEscalada(alerta.id))
             uow.alertas.guardar(alerta)
+            uow.auditar("alertas", alerta.id, AccionAuditoria.MODIFICACION, antes, alerta)
             uow.commit()
         return alerta
 

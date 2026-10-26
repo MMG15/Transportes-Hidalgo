@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block titulo %}Ingresar{% endblock %}
+{% block contenido %}
+<section class="tarjeta tarjeta--acento login">
+  <h1>Ingresar</h1>
+  {% if error %}<div class="aviso aviso--error" role="alert">✖ {{ error }}</div>{% endif %}
+  <form class="formulario" method="post" action="/login">
+    <div class="campo campo--ancho"><label for="email">Email</label><input id="email" name="email" type="email" value="{{ email or '' }}" autocomplete="username" required autofocus></div>
+    <div class="campo campo--ancho"><label for="contrasena">Contraseña</label><input id="contrasena" name="contrasena" type="password" autocomplete="current-password" required></div>
+    {% if siguiente %}<input type="hidden" name="siguiente" value="{{ siguiente }}">{% endif %}
+    <div class="formulario__acciones"><button class="boton" type="submit">Ingresar</button></div>
+  </form>
+  <p class="ayuda">Los choferes no usan el panel: envían sus tickets por Telegram.</p>
+</section>
+{% endblock %}

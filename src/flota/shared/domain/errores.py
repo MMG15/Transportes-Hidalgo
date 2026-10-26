@@ -19,3 +19,11 @@ class Duplicado(ErrorDominio):
 
 class ReglaNegocioViolada(ErrorDominio):
     """La operación no está permitida por una regla del negocio."""
+
+
+class NoAutenticado(ErrorDominio):
+    """No hay un usuario identificado (o sus credenciales no son válidas)."""
+
+
+class SinPermiso(ErrorDominio):
+    """El usuario está identificado pero su rol no permite la operación."""

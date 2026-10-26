@@ -6,6 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter
 
 from flota.dependencias import UoW
+from flota.usuarios.domain.entidades import Modulo
+from flota.usuarios.presentation.seguridad import requiere
 from flota.viajes.application.casos_de_uso import (
     ActualizarRuta,
     CambiarEstadoCarga,
@@ -27,7 +29,7 @@ from flota.viajes.presentation.esquemas import (
     ViajeLeer,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=requiere(Modulo.VIAJES))
 
 
 # ---------- Rutas ----------

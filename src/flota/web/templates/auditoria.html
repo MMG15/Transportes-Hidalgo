@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titulo %}Auditoría{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Auditoría</h1>
+    <p>Altas y cambios sobre gastos, cotizaciones, alertas y usuarios: quién, cuándo, antes y después (RF-55).</p>
+  </div>
+  <form class="formulario--linea" method="get">
+    <div class="campo"><label for="tabla">Registro</label>
+      <select id="tabla" name="tabla"><option value="">Todos</option>{% for t in tablas %}<option value="{{ t }}" {% if t == tabla %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></div>
+    <button class="boton boton--acento" type="submit">Filtrar</button>
+  </form>
+</div>
+
+<section class="tarjeta">
+  <div class="tabla-contenedor">
+    <table>
+      <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Registro</th><th>Qué cambió</th></tr></thead>
+      <tbody>
+        {% for r in registros %}
+        <tr>
+          <td>{{ r.fecha | fecha }}</td>
+          <td>{{ r.usuario_nombre }}</td>
+          <td><span class="etiqueta etiqueta--origen">{{ r.accion }}</span></td>
+          <td>{{ r.tabla }}</td>
+          <td>
+            {% if r.accion == "alta" %}Alta{% else %}
+              {% for campo in r.campos_cambiados %}
+                <div><strong>{{ campo }}</strong>: {{ (r.valor_anterior or {}).get(campo, "—") }} → {{ (r.valor_nuevo or {}).get(campo, "—") }}</div>
+              {% endfor %}
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="vacio">Sin registros.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -11,6 +11,10 @@ from flota.main import create_app
 from flota.modelos import Base
 from flota.shared.infrastructure.db import crear_session_factory
 from flota.unidad_de_trabajo import UnidadDeTrabajoSql
+from flota.usuarios.application.casos_de_uso import CrearUsuario, DatosUsuario
+from flota.usuarios.domain.entidades import Rol
+
+CONTRASENA = "clave-de-prueba"
 
 
 @pytest.fixture
@@ -31,9 +35,34 @@ def crear_uow():
 
 
 @pytest.fixture
-def cliente(crear_uow):
-    """App completa (API + panel) sobre la base de prueba."""
+def cliente_anonimo(crear_uow):
+    """App completa (API + panel) sobre la base de prueba, sin sesión iniciada."""
     app = create_app()
     app.dependency_overrides[obtener_uow] = crear_uow
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture
+def entrar(cliente_anonimo, crear_uow):
+    """`entrar(Rol.GERENCIA)` crea un usuario con ese rol e inicia sesión con él."""
+
+    def iniciar_sesion(rol: Rol, email: str | None = None):
+        email = email or f"{rol.value.lower()}@prueba.com"
+        CrearUsuario(crear_uow(), bootstrap.crear_hasher()).ejecutar(
+            DatosUsuario(f"Usuario {rol.value}", email, rol), CONTRASENA
+        )
+        cliente_anonimo.post("/logout")
+        respuesta = cliente_anonimo.post(
+            "/login", data={"email": email, "contrasena": CONTRASENA}, follow_redirects=False
+        )
+        assert respuesta.status_code == 303, respuesta.text
+        return cliente_anonimo
+
+    return iniciar_sesion
+
+
+@pytest.fixture
+def cliente(entrar):
+    """Cliente con sesión de Administrador de sistema (puede todo)."""
+    return entrar(Rol.ADMIN_SISTEMA, "admin@prueba.com")

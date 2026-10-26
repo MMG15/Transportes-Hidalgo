@@ -34,6 +34,7 @@ src/flota/
 ├── alertas/       MOD-05  Alertas con estado y resolución (generadas por eventos)
 ├── monedas/       MOD-10  Tipo de cambio CLP → ARS y conversión de gastos
 ├── reportes/      MOD-12  Tablero, reportes filtrables y Excel
+├── usuarios/      MOD-13  Usuarios, roles, permisos, login y auditoría
 ├── web/           Plantillas Jinja2 y estilos del panel
 ├── marca/         Colores y logos de Transportes Hidalgo
 ├── bootstrap.py   Raíz de composición: conecta puertos con adaptadores
@@ -48,11 +49,12 @@ Detalle completo en la [guía técnica](docs/guia-tecnica.md).
 ## Puesta en marcha
 
 ```powershell
-copy .env.example .env          # y completar DB_PASSWORD
+copy .env.example .env          # y completar DB_PASSWORD y SECRET_KEY
 uv sync                         # instala dependencias en .venv
 uv run flota crear-db           # crea la base 'flota' en PostgreSQL
 uv run alembic upgrade head     # crea las tablas
-uv run flota datos-demo         # (opcional) datos de ejemplo
+uv run flota crear-usuario admin@empresa.com "Tu nombre"   # primer administrador (ROL-07)
+uv run flota datos-demo         # (opcional) datos de ejemplo + un usuario por rol (contraseña demo1234)
 uv run flota servidor           # panel en http://127.0.0.1:8000 · API en /docs
 ```
 
@@ -64,6 +66,7 @@ uv run flota servidor           # panel en http://127.0.0.1:8000 · API en /docs
 | `uv run flota importar-carpeta entrada --origen tarjeta` | Importa todo lo de una carpeta y lo mueve a `procesados/` o `errores/` |
 | `uv run flota exportar --desde 2026-10-01 --hasta 2026-10-31` | Genera el reporte de consumo en `reportes/` |
 | `uv run flota plantilla` | Genera la planilla modelo para importar |
+| `uv run flota crear-usuario EMAIL NOMBRE --rol ROL-03` | Crea un usuario (pide la contraseña) |
 | `uv run flota recalcular-alertas` | Evalúa las alertas de consumo de los viajes cerrados |
 | `uv run pytest` | Corre los tests |
 

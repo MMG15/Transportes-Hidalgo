@@ -20,23 +20,32 @@ from fastapi.templating import Jinja2Templates
 
 from flota import marca
 from flota.shared.domain.errores import ErrorDominio
+from flota.usuarios.domain.entidades import Modulo, Usuario
 from flota.web.formato import FILTROS
 
 CARPETA_WEB = Path(__file__).parent
 
+# (ruta, texto, módulo): el menú muestra sólo lo que el rol del usuario puede ver.
 MENU = [
-    ("/", "Tablero"),
-    ("/viajes", "Viajes"),
-    ("/rutas", "Rutas"),
-    ("/combustible", "Combustible"),
-    ("/alertas", "Alertas"),
-    ("/monedas", "Tipo de cambio"),
-    ("/reportes", "Reportes"),
-    ("/catalogo", "Flota y clientes"),
+    ("/", "Tablero", Modulo.TABLERO),
+    ("/viajes", "Viajes", Modulo.VIAJES),
+    ("/rutas", "Rutas", Modulo.VIAJES),
+    ("/combustible", "Combustible", Modulo.COMBUSTIBLE),
+    ("/alertas", "Alertas", Modulo.ALERTAS),
+    ("/monedas", "Tipo de cambio", Modulo.PEAJES_MONEDAS),
+    ("/reportes", "Reportes", Modulo.TABLERO),
+    ("/catalogo", "Flota y clientes", Modulo.FLOTA),
+    ("/usuarios", "Usuarios", Modulo.USUARIOS),
 ]
 
+
+def primera_pagina(usuario: Usuario) -> str:
+    """La primera página del menú que el usuario puede ver (su "inicio")."""
+    return next((ruta for ruta, _, modulo in MENU if usuario.puede(modulo)), "/mi-cuenta")
+
+
 templates = Jinja2Templates(directory=CARPETA_WEB / "templates")
-templates.env.globals.update(colores=marca.COLORES, empresa=marca.NOMBRE_EMPRESA, menu=MENU)
+templates.env.globals.update(colores=marca.COLORES, empresa=marca.NOMBRE_EMPRESA)
 templates.env.filters.update(FILTROS)
 
 # Tipos de los campos de formulario (FastAPI los lee del cuerpo del POST).
@@ -48,7 +57,9 @@ FechaHora = Annotated[datetime, Form()]
 
 
 def pagina(request: Request, plantilla: str, seccion: str, **contexto) -> HTMLResponse:
-    contexto |= {"seccion": seccion, "anio": date.today().year}
+    usuario = getattr(request.state, "usuario", None)  # lo deja `usuario_actual`
+    menu = [(r, t) for r, t, m in MENU if usuario and usuario.puede(m)]
+    contexto |= {"seccion": seccion, "anio": date.today().year, "usuario": usuario, "menu": menu}
     return templates.TemplateResponse(request, plantilla, contexto)
 
 
@@ -79,3 +90,13 @@ def decimal_opcional(valor: str | None) -> Decimal | None:
 def periodo(desde: date | None, hasta: date | None, dias: int = 30) -> tuple[date, date]:
     hasta = hasta or date.today()
     return desde or hasta - timedelta(days=dias), hasta
+
+
+def es_htmx(request: Request) -> bool:
+    """HTMX agrega este encabezado a sus pedidos: así sabemos que espera un fragmento."""
+    return request.headers.get("HX-Request") == "true"
+
+
+def fragmento(request: Request, plantilla: str, **contexto) -> HTMLResponse:
+    """Un pedazo de página (sin encabezado ni menú) para que HTMX lo reemplace en el lugar."""
+    return templates.TemplateResponse(request, plantilla, contexto)

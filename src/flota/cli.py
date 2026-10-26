@@ -34,8 +34,11 @@ from flota.combustible.infrastructure.importacion import EXTENSIONES_SOPORTADAS,
 from flota.monedas.application.casos_de_uso import CargarCotizacion
 from flota.reportes.application.casos_de_uso import ExportarReporteConsumo, GenerarReporteConsumo
 from flota.reportes.infrastructure.excel import crear_plantilla_importacion
+from flota.shared.domain.auditoria import Actor
 from flota.shared.domain.dinero import Moneda
 from flota.shared.infrastructure.config import get_settings
+from flota.usuarios.application.casos_de_uso import CrearUsuario, DatosUsuario
+from flota.usuarios.domain.entidades import Rol
 from flota.viajes.application.casos_de_uso import (
     CambiarEstadoCarga,
     ConsultasViajes,
@@ -48,6 +51,14 @@ from flota.viajes.application.casos_de_uso import (
 from flota.viajes.domain.entidades import EstadoCarga, EstadoViaje, Pais
 
 app = typer.Typer(help="Gestión de flota y consumo de combustible.", no_args_is_help=True)
+
+CONSOLA = Actor(None, "consola")
+
+
+def _uow():
+    """Unidad de trabajo para los comandos: lo que se hace desde la consola queda auditado
+    como hecho por "consola"."""
+    return bootstrap.crear_uow(CONSOLA)
 
 
 @app.command()
@@ -117,7 +128,7 @@ def importar_carpeta(
 def _importar_archivo(archivo: Path, origen: OrigenDato):
     if not archivo.exists():
         raise typer.BadParameter(f"No existe el archivo {archivo}")
-    caso_uso = ImportarCargas(bootstrap.crear_uow(), lector_para_archivo(archivo), origen)
+    caso_uso = ImportarCargas(_uow(), lector_para_archivo(archivo), origen)
     return caso_uso.ejecutar(archivo)
 
 
@@ -134,7 +145,7 @@ def exportar(
         salida.mkdir(parents=True, exist_ok=True)
         salida = salida / f"consumo_{inicio}_{fin}.xlsx"
 
-    generar = GenerarReporteConsumo(bootstrap.crear_uow(), get_settings().umbral_desvio_pct)
+    generar = GenerarReporteConsumo(_uow(), get_settings().umbral_desvio_pct)
     exportar_uc = ExportarReporteConsumo(generar, bootstrap.crear_generador_reporte())
     reporte = exportar_uc.ejecutar(inicio, fin, salida)
     alertas = sum(1 for f in reporte.filas if f.alerta)
@@ -149,11 +160,11 @@ def recalcular_alertas(dias: int = 90) -> None:
     """
     config = get_settings()
     fin = datetime.now() + timedelta(days=1)
-    viajes = ConsultasViajes(bootstrap.crear_uow()).listar(fin - timedelta(days=dias + 1), fin)
+    viajes = ConsultasViajes(_uow()).listar(fin - timedelta(days=dias + 1), fin)
     generadas = 0
     for viaje in viajes:
         if viaje.estado == EstadoViaje.FINALIZADO:
-            evaluar = EvaluarAlertasViaje(bootstrap.crear_uow(), config.umbral_desvio_pct)
+            evaluar = EvaluarAlertasViaje(_uow(), config.umbral_desvio_pct)
             generadas += len(evaluar.ejecutar(viaje.id))
     typer.echo(f"{len(viajes)} viajes revisados, {generadas} alertas nuevas.")
 
@@ -174,9 +185,37 @@ def servidor(host: str = "127.0.0.1", puerto: int = 8000, recargar: bool = False
 
 
 @app.command()
+def crear_usuario(
+    email: str,
+    nombre: str,
+    rol: Annotated[Rol, typer.Option(help="ROL-01 a ROL-07")] = Rol.ADMIN_SISTEMA,
+    contrasena: Annotated[
+        str, typer.Option(prompt=True, hide_input=True, confirmation_prompt=True)
+    ] = "",
+) -> None:
+    """Crea un usuario. Para empezar: crear el Administrador de sistema (ROL-07)."""
+    usuario = CrearUsuario(_uow(), bootstrap.crear_hasher()).ejecutar(
+        DatosUsuario(nombre, email, rol), contrasena
+    )
+    typer.echo(f"Usuario {usuario.email} creado con el rol {usuario.nombre_rol}.")
+
+
+# Usuarios de demostración (uno por rol con acceso al panel). SÓLO para probar.
+USUARIOS_DEMO = [
+    ("admin@hidalgo.demo", "Administrador (demo)", Rol.ADMIN_SISTEMA),
+    ("gerencia@hidalgo.demo", "Gustavo (demo)", Rol.GERENCIA),
+    ("sistemas@hidalgo.demo", "Silvana (demo)", Rol.RESP_SISTEMAS),
+    ("administracion@hidalgo.demo", "Administración (demo)", Rol.ADMINISTRATIVO),
+    ("taller@hidalgo.demo", "Taller (demo)", Rol.JEFE_TALLER),
+    ("stock@hidalgo.demo", "Stock (demo)", Rol.ENCARGADO_STOCK),
+]
+CONTRASENA_DEMO = "demo1234"
+
+
+@app.command()
 def datos_demo() -> None:
     """Carga datos de ejemplo para probar el sistema."""
-    uow = bootstrap.crear_uow()
+    uow = _uow()
     with uow:
         if uow.camiones.listar(limite=1):
             typer.echo("Ya hay datos cargados; no se agregan datos de ejemplo.")
@@ -260,9 +299,16 @@ def datos_demo() -> None:
         )
         km[camion.id] = km_salida + 2 * distancia
         FinalizarViaje(uow).ejecutar(viaje.id, salida + timedelta(hours=12), km[camion.id])
+    crear = CrearUsuario(uow, bootstrap.crear_hasher())
+    for email, nombre, rol in USUARIOS_DEMO:
+        crear.ejecutar(DatosUsuario(nombre, email, rol), CONTRASENA_DEMO)
     typer.echo(
         "Datos de ejemplo cargados: 2 camiones, 2 choferes, 2 rutas y 8 viajes "
         "(ida cargado y regreso vacío)."
+    )
+    typer.echo(
+        f"Usuarios de demostración (contraseña {CONTRASENA_DEMO}): "
+        + ", ".join(email for email, _, _ in USUARIOS_DEMO)
     )
 
 

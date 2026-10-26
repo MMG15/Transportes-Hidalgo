@@ -9,8 +9,10 @@ from flota.alertas.application.casos_de_uso import ConsultasAlertas, ResolverAle
 from flota.alertas.domain.entidades import EstadoAlerta
 from flota.alertas.presentation.esquemas import AlertaLeer, AlertaResolver
 from flota.dependencias import UoW
+from flota.usuarios.domain.entidades import Modulo
+from flota.usuarios.presentation.seguridad import requiere
 
-router = APIRouter(prefix="/alertas", tags=["Alertas"])
+router = APIRouter(prefix="/alertas", tags=["Alertas"], dependencies=requiere(Modulo.ALERTAS))
 
 
 @router.get("", response_model=list[AlertaLeer])

@@ -9,6 +9,8 @@
   {# Paleta de marca: viene de src/flota/marca/__init__.py #}
   <style>:root { {% for nombre, valor in colores.items() %}--{{ nombre }}: {{ valor }}; {% endfor %}}</style>
   <link rel="stylesheet" href="/static/css/hidalgo.css">
+  {# HTMX: actualiza partes de la página sin recargarla (ej. resolver una alerta). #}
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
 </head>
 <body>
   <header>
@@ -16,8 +18,16 @@
       <div class="encabezado__contenido">
         <a href="/" aria-label="Inicio"><img class="marca__logo" src="/static/img/logo-hidalgo.png" alt="{{ empresa }}"></a>
         <span class="marca__subtitulo">Gestión de flota y combustible</span>
+        {% if usuario %}
+        <div class="sesion">
+          <span class="sesion__nombre">{{ usuario.nombre }} <span class="ayuda">· {{ usuario.nombre_rol }}</span></span>
+          <a href="/mi-cuenta">Mi cuenta</a>
+          <form method="post" action="/logout"><button class="boton boton--chico boton--acento" type="submit">Salir</button></form>
+        </div>
+        {% endif %}
       </div>
     </div>
+    {% if menu %}
     <nav class="menu" aria-label="Principal">
       <ul class="menu__lista">
         {% for ruta, texto in menu %}
@@ -27,6 +37,7 @@
         <li class="menu__item--secundario"><a class="menu__item" href="/docs">API</a></li>
       </ul>
     </nav>
+    {% endif %}
   </header>
 
   <main class="contenido">

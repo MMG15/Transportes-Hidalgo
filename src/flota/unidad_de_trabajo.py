@@ -25,13 +25,17 @@ from flota.monedas.infrastructure.repositorios import RepositorioTiposCambioSql
 from flota.reportes.application.puertos import UoWReportes
 from flota.shared.application.eventos import BusEventos
 from flota.shared.application.unidad_de_trabajo import UnidadDeTrabajoBase
+from flota.shared.domain.auditoria import SISTEMA, Actor
+from flota.shared.infrastructure.auditoria import RepositorioAuditoriaSql
+from flota.usuarios.application.puertos import UoWUsuarios
+from flota.usuarios.infrastructure.repositorios import RepositorioUsuariosSql
 from flota.viajes.infrastructure.repositorios import RepositorioRutasSql, RepositorioViajesSql
 
 # Tablas con importes convertidos (para saber si una cotización ya se usó, RF-41).
 TABLAS_DE_GASTOS = (CargaCombustibleModel,)
 
 
-class UnidadDeTrabajoSistema(UoWReportes, UoWAlertas, Protocol):
+class UnidadDeTrabajoSistema(UoWReportes, UoWAlertas, UoWUsuarios, Protocol):
     """La suma de lo que piden todos los módulos (la usan la API, el panel y la consola)."""
 
 
@@ -39,9 +43,12 @@ class UnidadDeTrabajoSql(UnidadDeTrabajoBase):
     """Abre una sesión (transacción) nueva en cada `with`."""
 
     def __init__(
-        self, session_factory: sessionmaker[Session], bus: BusEventos | None = None
+        self,
+        session_factory: sessionmaker[Session],
+        bus: BusEventos | None = None,
+        actor: Actor = SISTEMA,
     ) -> None:
-        super().__init__(bus)
+        super().__init__(bus, actor)
         self._session_factory = session_factory
 
     def __enter__(self) -> Self:
@@ -55,6 +62,8 @@ class UnidadDeTrabajoSql(UnidadDeTrabajoBase):
         self.cargas = RepositorioCargasSql(self._session)
         self.tipos_cambio = RepositorioTiposCambioSql(self._session, TABLAS_DE_GASTOS)
         self.alertas = RepositorioAlertasSql(self._session)
+        self.usuarios = RepositorioUsuariosSql(self._session)
+        self.auditoria = RepositorioAuditoriaSql(self._session)
         return super().__enter__()
 
     def __exit__(self, *args: object) -> None:

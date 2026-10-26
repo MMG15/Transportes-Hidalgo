@@ -18,6 +18,8 @@ from flota.combustible.domain.entidades import OrigenDato
 from flota.combustible.presentation.archivos import importar_subida
 from flota.dependencias import UoW
 from flota.shared.domain.dinero import Moneda
+from flota.usuarios.domain.entidades import Modulo
+from flota.usuarios.presentation.seguridad import requiere
 from flota.web.plantillas import (
     FechaHora,
     Id,
@@ -29,7 +31,7 @@ from flota.web.plantillas import (
     volver,
 )
 
-router = APIRouter(include_in_schema=False)
+router = APIRouter(include_in_schema=False, dependencies=requiere(Modulo.COMBUSTIBLE))
 
 
 def _pagina_combustible(request: Request, uow: UoW, **extra) -> HTMLResponse:

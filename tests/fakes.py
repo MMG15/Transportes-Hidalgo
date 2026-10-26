@@ -17,6 +17,9 @@ from flota.monedas.domain.repositorios import RepositorioTiposCambio
 from flota.shared.application.eventos import BusEventos
 from flota.shared.application.unidad_de_trabajo import UnidadDeTrabajoBase
 from flota.shared.domain.dinero import Moneda
+from flota.shared.domain.repositorio_auditoria import RepositorioAuditoria
+from flota.usuarios.application.puertos import HasherContrasenas
+from flota.usuarios.domain.repositorios import RepositorioUsuarios
 from flota.viajes.domain.entidades import EstadoViaje
 from flota.viajes.domain.repositorios import RepositorioRutas, RepositorioViajes
 
@@ -154,6 +157,33 @@ class AlertasFake(_EnMemoria, RepositorioAlertas):
         return len(self._filtrar(lambda a: a.abierta))
 
 
+class UsuariosFake(_EnMemoria, RepositorioUsuarios):
+    def obtener_por_email(self, email):
+        return self._primero(lambda u: u.email == email.strip().lower())
+
+
+class AuditoriaFake(_EnMemoria, RepositorioAuditoria):
+    def listar_filtrado(self, tabla=None, registro_id=None, usuario_id=None, limite=200):
+        lista = self._filtrar(
+            lambda r: (
+                (tabla is None or r.tabla == tabla)
+                and (registro_id is None or r.registro_id == registro_id)
+                and (usuario_id is None or r.usuario_id == usuario_id)
+            )
+        )
+        return sorted(lista, key=lambda r: r.fecha, reverse=True)[:limite]
+
+
+class HasherFake(HasherContrasenas):
+    """Argon2 es lento a propósito (dificulta adivinar contraseñas): en tests no hace falta."""
+
+    def hash(self, contrasena):
+        return f"hash:{contrasena}"
+
+    def verificar(self, contrasena, hash_guardado):
+        return hash_guardado == f"hash:{contrasena}"
+
+
 class UnidadDeTrabajoFake(UnidadDeTrabajoBase):
     """Unidad de trabajo en memoria. Con `bus`, publica los eventos como la real."""
 
@@ -168,6 +198,8 @@ class UnidadDeTrabajoFake(UnidadDeTrabajoBase):
         self.cargas = CargasFake()
         self.tipos_cambio = TiposCambioFake(self.cargas)
         self.alertas = AlertasFake()
+        self.usuarios = UsuariosFake()
+        self.auditoria = AuditoriaFake()
         self.commits = 0
         self.eventos_publicados: list = []
 

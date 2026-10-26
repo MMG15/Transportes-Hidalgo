@@ -20,8 +20,10 @@ from flota.combustible.presentation.esquemas import (
     ResultadoImportacionLeer,
 )
 from flota.dependencias import Config, UoW
+from flota.usuarios.domain.entidades import Modulo
+from flota.usuarios.presentation.seguridad import requiere
 
-router = APIRouter(tags=["Combustible"])
+router = APIRouter(tags=["Combustible"], dependencies=requiere(Modulo.COMBUSTIBLE))
 
 
 @router.post("/cargas", response_model=CargaLeer, status_code=201)

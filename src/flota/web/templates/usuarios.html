@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titulo %}Usuarios{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Usuarios y roles</h1>
+    <p>Cada persona accede sólo a los módulos de su rol. Los cambios quedan en la <a href="/auditoria">auditoría</a>.</p>
+  </div>
+</div>
+
+<section class="tarjeta tarjeta--acento">
+  <div class="tabla-contenedor">
+    <table>
+      <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Último acceso</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr>
+          <td><strong>{{ u.nombre }}</strong></td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.rol }} · {{ u.nombre_rol }}</td>
+          <td>{{ u.ultimo_acceso | fecha }}</td>
+          <td>{% if u.activo %}Habilitado{% else %}<span class="etiqueta etiqueta--finalizado">Deshabilitado</span>{% endif %}</td>
+          <td>
+            <details>
+              <summary>Editar</summary>
+              <form class="formulario" method="post" action="/usuarios/{{ u.id }}">
+                <div class="campo"><label>Nombre<input name="nombre" value="{{ u.nombre }}" required></label></div>
+                <div class="campo"><label>Email<input name="email" type="email" value="{{ u.email }}" required></label></div>
+                <div class="campo"><label>Rol
+                  <select name="rol">{% for codigo, nombre in roles.items() %}<option value="{{ codigo }}" {% if codigo == u.rol %}selected{% endif %}>{{ codigo }} · {{ nombre }}</option>{% endfor %}</select></label></div>
+                <div class="campo"><label>Telegram (chat id)<input name="telegram_chat_id" value="{{ u.telegram_chat_id or '' }}"></label></div>
+                <div class="campo"><label><input type="checkbox" name="activo" value="true" {% if u.activo %}checked{% endif %}> Habilitado</label></div>
+                <div class="formulario__acciones"><button class="boton boton--chico" type="submit">Guardar</button></div>
+              </form>
+              <form class="formulario--linea" method="post" action="/usuarios/{{ u.id }}/contrasena">
+                <div class="campo"><label>Nueva contraseña<input name="nueva" type="password" minlength="8" autocomplete="new-password" required></label></div>
+                <button class="boton boton--chico boton--acento" type="submit">Restablecer</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="tarjeta">
+  <details>
+    <summary>+ Nuevo usuario</summary>
+    <form class="formulario" method="post" action="/usuarios">
+      <div class="campo"><label for="nombre">Nombre</label><input id="nombre" name="nombre" required></div>
+      <div class="campo"><label for="email">Email</label><input id="email" name="email" type="email" required></div>
+      <div class="campo"><label for="rol">Rol</label>
+        <select id="rol" name="rol">{% for codigo, nombre in roles.items() %}<option value="{{ codigo }}">{{ codigo }} · {{ nombre }}</option>{% endfor %}</select></div>
+      <div class="campo"><label for="contrasena">Contraseña inicial</label><input id="contrasena" name="contrasena" type="password" minlength="8" autocomplete="new-password" required></div>
+      <div class="campo"><label for="telegram">Telegram (chat id, opcional)</label><input id="telegram" name="telegram_chat_id"></div>
+      <div class="formulario__acciones"><button class="boton" type="submit">Crear usuario</button></div>
+    </form>
+  </details>
+</section>
+{% endblock %}

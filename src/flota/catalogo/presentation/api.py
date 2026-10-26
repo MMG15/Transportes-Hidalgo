@@ -30,8 +30,10 @@ from flota.catalogo.presentation.esquemas import (
 )
 from flota.dependencias import UoW
 from flota.shared.presentation.esquemas import Desplazamiento, Limite
+from flota.usuarios.domain.entidades import Modulo
+from flota.usuarios.presentation.seguridad import requiere
 
-router = APIRouter()
+router = APIRouter(dependencies=requiere(Modulo.FLOTA))
 
 
 @router.post("/camiones", response_model=CamionLeer, status_code=201, tags=["Camiones"])

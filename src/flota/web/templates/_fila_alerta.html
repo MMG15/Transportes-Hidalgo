@@ -1,0 +1,25 @@
+{# Una fila de la tabla de alertas. HTMX la reemplaza sola al resolver. #}
+{% import "_macros.html" as m %}
+        <tr{% if a.abierta %} class="fila-alerta"{% endif %}>
+          <td>{{ a.creada_en | fecha }}</td>
+          <td><strong>{{ a.nombre_tipo }}</strong></td>
+          <td>{{ patentes.get(a.camion_id, "—") }}</td>
+          <td>{% if mensaje %}<div class="aviso aviso--{{ "error" if error else "ok" }}">{{ mensaje }}</div>{% endif %}{{ a.descripcion }}{% if a.comentario %}<p class="ayuda">💬 {{ a.comentario }}</p>{% endif %}</td>
+          <td>{{ m.estado_alerta(a) }}</td>
+          <td>
+            {% if a.abierta %}
+            <details>
+              <summary>Resolver</summary>
+              <form class="formulario" method="post" action="/alertas/{{ a.id }}"
+                    hx-post="/alertas/{{ a.id }}" hx-target="closest tr" hx-swap="outerHTML">
+                <div class="campo campo--ancho"><label>Comentario<textarea name="comentario" rows="2" required></textarea></label></div>
+                <div class="formulario__acciones">
+                  {% if a.estado == "abierta" %}<button class="boton boton--chico boton--acento" name="accion" value="en_analisis">En análisis</button>{% endif %}
+                  <button class="boton boton--chico" name="accion" value="justificar">Justificar</button>
+                  <button class="boton boton--chico boton--peligro" name="accion" value="confirmar">Confirmar desvío</button>
+                </div>
+              </form>
+            </details>
+            {% endif %}
+          </td>
+        </tr>

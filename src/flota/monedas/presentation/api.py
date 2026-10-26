@@ -11,8 +11,12 @@ from flota.monedas.application.casos_de_uso import (
     CorregirCotizacion,
 )
 from flota.monedas.presentation.esquemas import CotizacionCorregir, CotizacionCrear, TipoCambioLeer
+from flota.usuarios.domain.entidades import Modulo
+from flota.usuarios.presentation.seguridad import requiere
 
-router = APIRouter(prefix="/tipos-cambio", tags=["Monedas"])
+router = APIRouter(
+    prefix="/tipos-cambio", tags=["Monedas"], dependencies=requiere(Modulo.PEAJES_MONEDAS)
+)
 
 
 @router.post("", response_model=TipoCambioLeer, status_code=201)

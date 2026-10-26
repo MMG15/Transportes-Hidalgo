@@ -19,28 +19,7 @@
       <thead><tr><th>Fecha</th><th>Tipo</th><th>Camión</th><th>Detalle</th><th>Estado</th><th></th></tr></thead>
       <tbody>
         {% for a in alertas %}
-        <tr{% if a.abierta %} class="fila-alerta"{% endif %}>
-          <td>{{ a.creada_en | fecha }}</td>
-          <td><strong>{{ a.nombre_tipo }}</strong></td>
-          <td>{{ patentes.get(a.camion_id, "—") }}</td>
-          <td>{{ a.descripcion }}{% if a.comentario %}<p class="ayuda">💬 {{ a.comentario }}</p>{% endif %}</td>
-          <td>{{ m.estado_alerta(a) }}</td>
-          <td>
-            {% if a.abierta %}
-            <details>
-              <summary>Resolver</summary>
-              <form class="formulario" method="post" action="/alertas/{{ a.id }}">
-                <div class="campo campo--ancho"><label>Comentario<textarea name="comentario" rows="2" required></textarea></label></div>
-                <div class="formulario__acciones">
-                  {% if a.estado == "abierta" %}<button class="boton boton--chico boton--acento" name="accion" value="en_analisis">En análisis</button>{% endif %}
-                  <button class="boton boton--chico" name="accion" value="justificar">Justificar</button>
-                  <button class="boton boton--chico boton--peligro" name="accion" value="confirmar">Confirmar desvío</button>
-                </div>
-              </form>
-            </details>
-            {% endif %}
-          </td>
-        </tr>
+        {% include "_fila_alerta.html" %}
         {% else %}
         <tr><td colspan="6" class="vacio">{% if ver == "abiertas" %}No hay alertas abiertas. ✔{% else %}Todavía no hubo alertas.{% endif %}</td></tr>
         {% endfor %}

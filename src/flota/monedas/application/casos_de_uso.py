@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
@@ -9,6 +10,7 @@ from uuid import UUID
 from flota.monedas.application.puertos import UoWMonedas
 from flota.monedas.domain.entidades import TipoCambio, convertir_a_pesos
 from flota.shared.application.comun import obtener_o_fallar
+from flota.shared.domain.auditoria import AccionAuditoria
 from flota.shared.domain.dinero import Dinero, ImporteGasto, Moneda
 from flota.shared.domain.errores import Duplicado, ReglaNegocioViolada
 
@@ -34,6 +36,7 @@ class CargarCotizacion:
                     "para cambiarla usá «corregir»"
                 )
             uow.tipos_cambio.guardar(tipo)
+            uow.auditar("tipos_cambio", tipo.id, AccionAuditoria.ALTA, despues=tipo)
             uow.commit()
         return tipo
 
@@ -59,8 +62,10 @@ class CorregirCotizacion:
                     f"La cotización ya se aplicó a {usos} gasto(s). Confirmá la corrección: "
                     "esos gastos conservan la cotización original."
                 )
+            antes = replace(tipo)  # copia del estado anterior, para la auditoría
             tipo.corregir(cotizacion, fuente)
             uow.tipos_cambio.guardar(tipo)
+            uow.auditar("tipos_cambio", tipo.id, AccionAuditoria.MODIFICACION, antes, tipo)
             uow.commit()
         return tipo
 

@@ -23,6 +23,8 @@ from flota.catalogo.application.casos_de_uso import (
     RegistrarProducto,
 )
 from flota.dependencias import UoW
+from flota.usuarios.domain.entidades import Modulo
+from flota.usuarios.presentation.seguridad import requiere
 from flota.web.plantillas import (
     Numero,
     Texto,
@@ -32,7 +34,8 @@ from flota.web.plantillas import (
     pagina,
 )
 
-router = APIRouter(include_in_schema=False)  # no aparece en la documentación de la API
+# include_in_schema=False: las páginas no aparecen en la documentación de la API.
+router = APIRouter(include_in_schema=False, dependencies=requiere(Modulo.FLOTA))
 
 
 @router.get("/catalogo", response_class=HTMLResponse)

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block titulo %}Sin permiso{% endblock %}
+{% block contenido %}
+<section class="tarjeta tarjeta--acento login">
+  <h1>Sin permiso</h1>
+  <div class="aviso aviso--error" role="alert">✖ {{ mensaje }}</div>
+  <p><a class="boton" href="/">Volver al inicio</a></p>
+</section>
+{% endblock %}

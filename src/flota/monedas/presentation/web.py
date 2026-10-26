@@ -16,9 +16,11 @@ from flota.monedas.application.casos_de_uso import (
     CorregirCotizacion,
 )
 from flota.shared.domain.dinero import Moneda
+from flota.usuarios.domain.entidades import Modulo
+from flota.usuarios.presentation.seguridad import requiere
 from flota.web.plantillas import Numero, Texto, ejecutar, pagina
 
-router = APIRouter(include_in_schema=False)
+router = APIRouter(include_in_schema=False, dependencies=requiere(Modulo.PEAJES_MONEDAS))
 
 
 @router.get("/monedas", response_class=HTMLResponse)

@@ -8,6 +8,7 @@ from flota import bootstrap
 from flota.reportes.application.puertos import GeneradorReporte
 from flota.shared.infrastructure.config import Settings, get_settings
 from flota.unidad_de_trabajo import UnidadDeTrabajoSistema
+from flota.usuarios.application.puertos import HasherContrasenas
 
 
 def obtener_uow() -> UnidadDeTrabajoSistema:
@@ -21,3 +22,10 @@ def obtener_generador() -> GeneradorReporte:
 UoW = Annotated[UnidadDeTrabajoSistema, Depends(obtener_uow)]
 Config = Annotated[Settings, Depends(get_settings)]
 Generador = Annotated[GeneradorReporte, Depends(obtener_generador)]
+
+
+def obtener_hasher() -> HasherContrasenas:
+    return bootstrap.crear_hasher()
+
+
+Hasher = Annotated[HasherContrasenas, Depends(obtener_hasher)]
