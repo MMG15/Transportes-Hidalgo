@@ -11,7 +11,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from flota.shared.domain.errores import DatosInvalidos
-from flota.shared.domain.validaciones import opcional, positivo, requerido
+from flota.shared.domain.validaciones import no_negativo, opcional, positivo, requerido
 
 
 def normalizar_patente(patente: str) -> str:
@@ -25,7 +25,11 @@ class Camion:
     marca: str
     modelo: str
     capacidad_tanque_litros: Decimal
-    consumo_referencia_l100km: Decimal  # consumo esperado según fabricante / histórico
+    # Consumo esperado según fabricante. Es la referencia de RESPALDO: se usa sólo cuando la
+    # ruta no tiene una referencia configurada ni historial suficiente.
+    consumo_referencia_l100km: Decimal
+    anio: int | None = None
+    km_actual: Decimal | None = None  # última lectura conocida del odómetro (viajes, GPS)
     activo: bool = True
     id: UUID = field(default_factory=uuid4)
 
@@ -35,6 +39,14 @@ class Camion:
         self.modelo = requerido(self.modelo, "modelo")
         positivo(self.capacidad_tanque_litros, "capacidad_tanque_litros")
         positivo(self.consumo_referencia_l100km, "consumo_referencia_l100km")
+        no_negativo(self.km_actual, "km_actual")
+        if self.anio is not None and not 1950 <= self.anio <= 2100:
+            raise DatosInvalidos("El año del camión no es válido")
+
+    def registrar_km(self, km: Decimal) -> None:
+        """Actualiza el odómetro conocido. Nunca retrocede (una lectura vieja no lo pisa)."""
+        if self.km_actual is None or km > self.km_actual:
+            self.km_actual = km
 
 
 @dataclass(kw_only=True)

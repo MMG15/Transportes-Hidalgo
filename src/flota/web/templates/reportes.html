@@ -17,7 +17,22 @@
     <div class="campo"><label for="camion_id">Camión</label>
       <select id="camion_id" name="camion_id">
         <option value="">Todos</option>
-        {% for c in camiones %}<option value="{{ c.id }}" {% if c.id == camion_id %}selected{% endif %}>{{ c.patente }}</option>{% endfor %}
+        {% for c in camiones %}<option value="{{ c.id }}" {% if c.id == filtro.camion_id %}selected{% endif %}>{{ c.patente }}</option>{% endfor %}
+      </select></div>
+    <div class="campo"><label for="chofer_id">Chofer</label>
+      <select id="chofer_id" name="chofer_id">
+        <option value="">Todos</option>
+        {% for c in choferes %}<option value="{{ c.id }}" {% if c.id == filtro.chofer_id %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
+      </select></div>
+    <div class="campo"><label for="ruta_id">Ruta</label>
+      <select id="ruta_id" name="ruta_id">
+        <option value="">Todas</option>
+        {% for r in rutas %}<option value="{{ r.id }}" {% if r.id == filtro.ruta_id %}selected{% endif %}>{{ r.nombre }}</option>{% endfor %}
+      </select></div>
+    <div class="campo"><label for="pais">País</label>
+      <select id="pais" name="pais">
+        <option value="">Todos</option>
+        {% for p in paises %}<option value="{{ p }}" {% if p == filtro.pais %}selected{% endif %}>{{ p }}</option>{% endfor %}
       </select></div>
     <button class="boton boton--acento" type="submit">Actualizar</button>
   </form>
@@ -30,29 +45,43 @@
   {{ m.tabla_resumen(reporte.resumen_por_camion) }}
 </section>
 
+<div class="grilla">
+  <section class="tarjeta">
+    <h2>Por chofer</h2>
+    {{ m.tabla_grupo(reporte.resumen_por_chofer, "Chofer") }}
+  </section>
+  <section class="tarjeta">
+    <h2>Por ruta</h2>
+    {{ m.tabla_grupo(reporte.resumen_por_ruta, "Ruta") }}
+  </section>
+</div>
+
 <section class="tarjeta">
   <h2>Detalle por viaje</h2>
   <div class="tabla-contenedor">
     <table>
       <thead>
-        <tr><th>Salida</th><th>Patente</th><th>Chofer</th><th>Cliente</th><th class="num">Cantidad</th><th class="num">Km</th>
-          <th class="num">Litros</th><th class="num">L/100km</th><th class="num">L por unidad</th><th class="num">Costo</th><th class="num">Desvío</th><th>Estado</th></tr>
+        <tr><th>Salida</th><th>Patente</th><th>Chofer</th><th>Ruta</th><th class="num">Cantidad</th><th class="num">Km</th>
+          <th class="num">Litros</th><th class="num">L/100km</th><th class="num">Cargado</th><th class="num">Vacío</th>
+          <th class="num">Costo</th><th class="num">Desvío</th><th>Referencia</th><th>Estado</th></tr>
       </thead>
       <tbody>
         {% for f in reporte.filas %}
         <tr{% if f.alerta %} class="fila-alerta"{% endif %}>
-          <td>{{ f.fecha_salida | fecha }}</td><td><strong>{{ f.patente }}</strong></td><td>{{ f.chofer }}</td><td>{{ f.cliente }}</td>
-          <td class="num">{{ f.cantidad | numero(1) }} {{ f.unidad }}</td>
+          <td>{{ f.fecha_salida | fecha }}</td><td><strong>{{ f.patente }}</strong></td><td>{{ f.chofer }}</td><td>{{ f.ruta }}</td>
+          <td class="num">{% if f.cantidad %}{{ f.cantidad | numero(1) }} {{ f.unidad }}{% else %}—{% endif %}</td>
           <td class="num">{{ f.km_recorridos | numero(0) }}</td>
           <td class="num">{{ f.litros | numero(1) }}</td>
           <td class="num">{{ f.consumo_l100km | numero(1) }}</td>
-          <td class="num">{{ f.litros_por_unidad | numero(2) }}</td>
+          <td class="num" title="Referencia {{ f.referencia_cargado_l100km | numero(1) }}">{{ f.consumo_cargado_l100km | numero(1) }}</td>
+          <td class="num" title="Referencia {{ f.referencia_vacio_l100km | numero(1) }}">{{ f.consumo_vacio_l100km | numero(1) }}</td>
           <td class="num">{{ f.costo | moneda }}</td>
           <td class="num">{{ m.desvio(f.desvio_pct) }}</td>
+          <td><span class="etiqueta etiqueta--origen">{{ f.fuente_referencia }}</span></td>
           <td>{{ m.estado(f) }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="12" class="vacio">No hay viajes en el período.</td></tr>
+        <tr><td colspan="14" class="vacio">No hay viajes con esos filtros.</td></tr>
         {% endfor %}
       </tbody>
     </table>

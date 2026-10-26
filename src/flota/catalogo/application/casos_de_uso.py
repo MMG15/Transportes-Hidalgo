@@ -19,6 +19,20 @@ class DatosCamion:
     modelo: str
     capacidad_tanque_litros: Decimal
     consumo_referencia_l100km: Decimal
+    anio: int | None = None
+    km_actual: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class CambiosCamion:
+    """Campos editables de un camión (la patente no cambia: identifica al camión)."""
+
+    marca: str
+    modelo: str
+    capacidad_tanque_litros: Decimal
+    consumo_referencia_l100km: Decimal
+    anio: int | None
+    activo: bool
 
 
 @dataclass(frozen=True)
@@ -52,6 +66,37 @@ class RegistrarCamion:
             uow.camiones.guardar(camion)
             uow.commit()
         return camion
+
+
+class ActualizarCamion:
+    """MOD-01: edición y baja lógica (activo = False) de un camión."""
+
+    def __init__(self, uow: UoWCatalogo) -> None:
+        self._uow = uow
+
+    def ejecutar(self, camion_id: UUID, cambios: CambiosCamion) -> Camion:
+        with self._uow as uow:
+            actual = obtener_o_fallar(uow.camiones, camion_id, "camión")
+            # Se reconstruye la entidad para que vuelvan a correr las validaciones.
+            camion = Camion(**(asdict(actual) | asdict(cambios)))
+            uow.camiones.guardar(camion)
+            uow.commit()
+        return camion
+
+
+class ActualizarChofer:
+    """MOD-01: edición y baja lógica de un chofer."""
+
+    def __init__(self, uow: UoWCatalogo) -> None:
+        self._uow = uow
+
+    def ejecutar(self, chofer_id: UUID, nombre: str, activo: bool) -> Chofer:
+        with self._uow as uow:
+            actual = obtener_o_fallar(uow.choferes, chofer_id, "chofer")
+            chofer = Chofer(**(asdict(actual) | {"nombre": nombre, "activo": activo}))
+            uow.choferes.guardar(chofer)
+            uow.commit()
+        return chofer
 
 
 class RegistrarChofer:

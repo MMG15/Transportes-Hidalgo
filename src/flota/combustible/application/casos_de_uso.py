@@ -7,8 +7,9 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from flota.combustible.application.consumo import CalculadoraConsumo
 from flota.combustible.application.puertos import UoWCombustible
-from flota.combustible.domain.consumo import ResumenConsumo, calcular_consumo
+from flota.combustible.domain.consumo import ResumenConsumo
 from flota.combustible.domain.entidades import CargaCombustible, OrigenDato
 from flota.shared.application.comun import obtener_o_fallar
 from flota.shared.domain.errores import Duplicado, ReglaNegocioViolada
@@ -72,6 +73,8 @@ class ConsultasCargas:
 
 
 class ObtenerConsumoViaje:
+    """CU-05 — RF-10, RF-11, RF-13: consumo del viaje por tramo, contra la referencia de la ruta."""
+
     def __init__(self, uow: UoWCombustible, umbral_desvio_pct: Decimal) -> None:
         self._uow = uow
         self._umbral = umbral_desvio_pct
@@ -79,6 +82,4 @@ class ObtenerConsumoViaje:
     def ejecutar(self, viaje_id: UUID) -> ResumenConsumo:
         with self._uow as uow:
             viaje = obtener_o_fallar(uow.viajes, viaje_id, "viaje")
-            camion = obtener_o_fallar(uow.camiones, viaje.camion_id, "camión")
-            cargas = uow.cargas.listar_por_viajes([viaje.id])
-        return calcular_consumo(viaje, camion, cargas, self._umbral)
+            return CalculadoraConsumo(uow, self._umbral).calcular(viaje)

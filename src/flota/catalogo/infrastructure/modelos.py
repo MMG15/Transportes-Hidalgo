@@ -20,6 +20,8 @@ class CamionModel(ConAuditoria, Base):
     modelo: Mapped[str] = mapped_column(String(60))
     capacidad_tanque_litros: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     consumo_referencia_l100km: Mapped[Decimal] = mapped_column(Numeric(6, 2))
+    anio: Mapped[int | None]
+    km_actual: Mapped[Decimal | None] = mapped_column(Numeric(10, 1))
     activo: Mapped[bool] = mapped_column(default=True)
 
 

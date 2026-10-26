@@ -68,3 +68,32 @@
   </table>
 </div>
 {% endmacro %}
+
+{% macro tabla_grupo(grupos, titulo) %}
+<div class="tabla-contenedor">
+  <table>
+    <thead>
+      <tr>
+        <th>{{ titulo }}</th><th class="num">Viajes</th><th class="num">Km</th><th class="num">Litros</th>
+        <th class="num">L/100km</th><th class="num">Cargado</th><th class="num">Vacío</th><th class="num">Alertas</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in grupos %}
+      <tr{% if g.viajes_con_alerta %} class="fila-alerta"{% endif %}>
+        <td><strong>{{ g.nombre }}</strong></td>
+        <td class="num">{{ g.viajes }}</td>
+        <td class="num">{{ g.km_recorridos | numero(0) }}</td>
+        <td class="num">{{ g.litros | numero(1) }}</td>
+        <td class="num">{{ g.consumo_promedio_l100km | numero(1) }}</td>
+        <td class="num">{{ g.consumo_cargado_l100km | numero(1) }}</td>
+        <td class="num">{{ g.consumo_vacio_l100km | numero(1) }}</td>
+        <td class="num">{% if g.viajes_con_alerta %}⚠ {{ g.viajes_con_alerta }}{% else %}0{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="vacio">Sin datos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}

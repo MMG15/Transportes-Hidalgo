@@ -161,3 +161,8 @@ details[open] > summary { margin-bottom: 12px; }
   .indicador__valor { font-size: 1.3rem; }
   .menu__item--secundario { margin-left: 0; }
 }
+
+/* ---------- Textos de ayuda ---------- */
+.ayuda { color: var(--texto-suave); font-size: .85rem; margin: 8px 0 0; }
+td .ayuda { margin: 0; font-size: .78rem; }
+.campo label input[type="checkbox"] { width: auto; margin-right: 6px; }

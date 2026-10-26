@@ -20,7 +20,7 @@ from flota.catalogo.infrastructure.repositorios import (
 from flota.combustible.infrastructure.repositorios import RepositorioCargasSql
 from flota.reportes.application.puertos import UoWReportes
 from flota.shared.application.unidad_de_trabajo import UnidadDeTrabajoBase
-from flota.viajes.infrastructure.repositorios import RepositorioViajesSql
+from flota.viajes.infrastructure.repositorios import RepositorioRutasSql, RepositorioViajesSql
 
 
 class UnidadDeTrabajoSistema(UoWReportes, Protocol):
@@ -39,6 +39,7 @@ class UnidadDeTrabajoSql(UnidadDeTrabajoBase):
         self.choferes = RepositorioChoferesSql(self._session)
         self.clientes = RepositorioClientesSql(self._session)
         self.productos = RepositorioProductosSql(self._session)
+        self.rutas = RepositorioRutasSql(self._session)
         self.viajes = RepositorioViajesSql(self._session)
         self.cargas = RepositorioCargasSql(self._session)
         return super().__enter__()

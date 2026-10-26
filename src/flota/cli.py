@@ -33,7 +33,15 @@ from flota.combustible.infrastructure.importacion import EXTENSIONES_SOPORTADAS,
 from flota.reportes.application.casos_de_uso import ExportarReporteConsumo, GenerarReporteConsumo
 from flota.reportes.infrastructure.excel import crear_plantilla_importacion
 from flota.shared.infrastructure.config import get_settings
-from flota.viajes.application.casos_de_uso import DatosInicioViaje, FinalizarViaje, IniciarViaje
+from flota.viajes.application.casos_de_uso import (
+    CambiarEstadoCarga,
+    DatosInicioViaje,
+    DatosRuta,
+    FinalizarViaje,
+    IniciarViaje,
+    RegistrarRuta,
+)
+from flota.viajes.domain.entidades import EstadoCarga, Pais
 
 app = typer.Typer(help="Gestión de flota y consumo de combustible.", no_args_is_help=True)
 
@@ -157,56 +165,79 @@ def datos_demo() -> None:
             raise typer.Exit()
 
     scania = RegistrarCamion(uow).ejecutar(
-        DatosCamion("AB123CD", "Scania", "R450", Decimal("600"), Decimal("38"))
+        DatosCamion("AB123CD", "Scania", "R450", Decimal("600"), Decimal("40"), anio=2019)
     )
     mercedes = RegistrarCamion(uow).ejecutar(
-        DatosCamion("AC456EF", "Mercedes-Benz", "Actros 2645", Decimal("500"), Decimal("36"))
+        DatosCamion("AC456EF", "Mercedes-Benz", "Actros 2645", Decimal("500"), Decimal("38"), 2021)
     )
     juan = RegistrarChofer(uow).ejecutar(DatosChofer("Juan Pérez", "30123456"))
     maria = RegistrarChofer(uow).ejecutar(DatosChofer("María Gómez", "28987654"))
-    productor = RegistrarCliente(uow).ejecutar(
-        DatosCliente("Agropecuaria San José S.A.", "30-71234567-8", "Pergamino")
+    cliente = RegistrarCliente(uow).ejecutar(
+        DatosCliente("Cliente principal (demo)", "30-71234567-8", "San Juan")
     )
     cal_viva = RegistrarProducto(uow).ejecutar(DatosProducto("Cal viva"))
     RegistrarProducto(uow).ejecutar(DatosProducto("Cal hidratada"))
+    # Mendoza tiene referencias configuradas; Los Andes no: usa el histórico o el camión.
+    mendoza = RegistrarRuta(uow).ejecutar(
+        DatosRuta(
+            "Planta Albardón (SJ)", "Mendoza (MZA)", Pais.AR, Decimal("170"),
+            Decimal("42"), Decimal("31"),
+        )
+    )  # fmt: skip
+    los_andes = RegistrarRuta(uow).ejecutar(
+        DatosRuta("Planta Albardón (SJ)", "Los Andes (CL)", Pais.CL, Decimal("390"))
+    )
 
     config = get_settings()
     registrar_carga = RegistrarCargaCombustible(uow, config.tolerancia_tanque_pct)
-    hoy = datetime.now().replace(minute=0, second=0, microsecond=0)
-    # (camión, chofer, días atrás, km salida, km recorridos, litros cargados)
+    hoy = datetime.now().replace(hour=6, minute=0, second=0, microsecond=0)
+    km = {scania.id: Decimal("125000"), mercedes.id: Decimal("98000")}
+    # (camión, chofer, ruta, días atrás, km por tramo, litros ida cargado, litros regreso vacío)
     viajes = [
-        (scania, juan, 6, 125000, 420, 160),
-        (mercedes, maria, 5, 98000, 380, 132),
-        (scania, juan, 3, 125420, 415, 190),  # consumo alto -> alerta
-        (mercedes, maria, 2, 98380, 390, 140),
+        (scania, juan, los_andes, 20, 390, 188, 132),
+        (mercedes, maria, mendoza, 18, 170, 71, 52),
+        (scania, juan, los_andes, 15, 390, 182, 130),
+        (mercedes, maria, mendoza, 13, 170, 73, 54),
+        (scania, juan, los_andes, 10, 390, 186, 135),
+        (mercedes, maria, mendoza, 7, 170, 70, 53),
+        (scania, juan, los_andes, 4, 390, 232, 134),  # ida con consumo alto -> alerta
+        (mercedes, maria, mendoza, 2, 170, 72, 51),
     ]
-    for camion, chofer, dias, km, recorrido, litros in viajes:
+    for camion, chofer, ruta, dias, distancia, litros_ida, litros_vuelta in viajes:
         salida = hoy - timedelta(days=dias)
+        km_salida = km[camion.id]
         viaje = IniciarViaje(uow).ejecutar(
             DatosInicioViaje(
                 camion.id,
                 chofer.id,
-                productor.id,
-                cal_viva.id,
-                "Planta Olavarría",
-                "Campo La Esperanza",
-                Decimal("28"),
+                ruta.id,
                 salida,
-                Decimal(km),
+                km_salida,
+                cliente_id=cliente.id,
+                producto_id=cal_viva.id,
+                cantidad=Decimal("28"),
             )
         )
-        registrar_carga.ejecutar(
-            DatosCarga(
-                camion.id,
-                salida + timedelta(hours=4),
-                Decimal(litros),
-                Decimal("1450"),
-                estacion="YPF Ruta 226",
-                referencia_externa=f"DEMO-{viaje.id.hex[:8]}",
+        for horas, litros in ((2, litros_ida), (8, litros_vuelta)):
+            registrar_carga.ejecutar(
+                DatosCarga(
+                    camion.id,
+                    salida + timedelta(hours=horas),
+                    Decimal(litros),
+                    Decimal("1450"),
+                    estacion="YPF Ruta 40" if horas == 2 else "Copec Los Andes",
+                    referencia_externa=f"DEMO-{viaje.id.hex[:8]}-{horas}",
+                )
             )
+        CambiarEstadoCarga(uow).ejecutar(
+            viaje.id, salida + timedelta(hours=6), km_salida + distancia, EstadoCarga.VACIO
         )
-        FinalizarViaje(uow).ejecutar(viaje.id, salida + timedelta(hours=9), Decimal(km + recorrido))
-    typer.echo("Datos de ejemplo cargados: 2 camiones, 2 choferes, 1 productor, 4 viajes.")
+        km[camion.id] = km_salida + 2 * distancia
+        FinalizarViaje(uow).ejecutar(viaje.id, salida + timedelta(hours=12), km[camion.id])
+    typer.echo(
+        "Datos de ejemplo cargados: 2 camiones, 2 choferes, 2 rutas y 8 viajes "
+        "(ida cargado y regreso vacío)."
+    )
 
 
 if __name__ == "__main__":

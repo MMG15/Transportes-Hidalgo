@@ -5,7 +5,7 @@
 <div class="titulo-pagina">
   <div>
     <h1>Viajes</h1>
-    <p>Salidas del {{ desde | fecha }} al {{ hasta | fecha }}</p>
+    <p>Salidas del {{ desde | fecha }} al {{ hasta | fecha }} · <a href="/rutas">Rutas y referencias de consumo</a></p>
   </div>
   <form class="formulario--linea" method="get">
     <div class="campo"><label for="desde">Desde</label><input id="desde" type="date" name="desde" value="{{ desde | fecha_input }}"></div>
@@ -17,26 +17,29 @@
 <section class="tarjeta tarjeta--acento">
   <details {% if not filas %}open{% endif %}>
     <summary>+ Iniciar un viaje</summary>
-    {% if not (camiones and choferes and clientes and productos) %}
-      <div class="aviso aviso--info">Antes de iniciar viajes cargá al menos un camión, un chofer, un cliente y un producto en <a href="/catalogo">Flota y clientes</a>.</div>
+    {% if not (camiones and choferes and rutas) %}
+      <div class="aviso aviso--info">Antes de iniciar viajes cargá al menos un camión y un chofer en <a href="/catalogo">Flota y clientes</a> y una ruta en <a href="/rutas">Rutas</a>.</div>
     {% else %}
     <form class="formulario" method="post" action="/viajes">
       <div class="campo"><label for="camion_id">Camión</label>
         <select id="camion_id" name="camion_id" required>{% for c in camiones %}<option value="{{ c.id }}">{{ c.patente }} · {{ c.marca }} {{ c.modelo }}</option>{% endfor %}</select></div>
       <div class="campo"><label for="chofer_id">Chofer</label>
         <select id="chofer_id" name="chofer_id" required>{% for c in choferes %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}</select></div>
-      <div class="campo"><label for="cliente_id">Cliente</label>
-        <select id="cliente_id" name="cliente_id" required>{% for c in clientes %}<option value="{{ c.id }}">{{ c.razon_social }}</option>{% endfor %}</select></div>
+      <div class="campo"><label for="ruta_id">Ruta</label>
+        <select id="ruta_id" name="ruta_id" required>{% for r in rutas %}<option value="{{ r.id }}">{{ r.nombre }} ({{ r.pais }})</option>{% endfor %}</select></div>
+      <div class="campo"><label for="estado_carga">Sale</label>
+        <select id="estado_carga" name="estado_carga"><option value="cargado">Cargado</option><option value="vacio">Vacío</option></select></div>
       <div class="campo"><label for="producto_id">Producto</label>
-        <select id="producto_id" name="producto_id" required>{% for p in productos %}<option value="{{ p.id }}">{{ p.nombre }} ({{ p.unidad }})</option>{% endfor %}</select></div>
-      <div class="campo"><label for="cantidad">Cantidad</label><input id="cantidad" name="cantidad" type="number" step="0.01" min="0.01" required></div>
-      <div class="campo"><label for="origen">Origen</label><input id="origen" name="origen" required placeholder="Planta"></div>
-      <div class="campo"><label for="destino">Destino</label><input id="destino" name="destino" required placeholder="Campo del productor"></div>
+        <select id="producto_id" name="producto_id"><option value="">—</option>{% for p in productos %}<option value="{{ p.id }}">{{ p.nombre }} ({{ p.unidad }})</option>{% endfor %}</select></div>
+      <div class="campo"><label for="cantidad">Cantidad (tn)</label><input id="cantidad" name="cantidad" type="number" step="0.01" min="0.01"></div>
+      <div class="campo"><label for="cliente_id">Cliente</label>
+        <select id="cliente_id" name="cliente_id"><option value="">—</option>{% for c in clientes %}<option value="{{ c.id }}">{{ c.razon_social }}</option>{% endfor %}</select></div>
       <div class="campo"><label for="fecha_salida">Fecha y hora de salida</label><input id="fecha_salida" name="fecha_salida" type="datetime-local" value="{{ ahora | fecha_input }}" required></div>
       <div class="campo"><label for="km_salida">Odómetro al salir (km)</label><input id="km_salida" name="km_salida" type="number" step="0.1" min="0" required></div>
       <div class="campo campo--ancho"><label for="observaciones">Observaciones</label><input id="observaciones" name="observaciones"></div>
       <div class="formulario__acciones"><button class="boton" type="submit">Iniciar viaje</button></div>
     </form>
+    <p class="ayuda">Si sale cargado hay que indicar producto y cantidad. Al descargar, registrá la descarga: el resto del viaje se mide como tramo vacío.</p>
     {% endif %}
   </details>
 </section>
@@ -46,9 +49,9 @@
     <table>
       <thead>
         <tr>
-          <th>Salida</th><th>Patente</th><th>Chofer</th><th>Cliente</th><th>Producto</th><th>Destino</th>
-          <th class="num">Km</th><th class="num">Litros</th><th class="num">L/100km</th><th class="num">Desvío</th>
-          <th>Estado</th><th></th>
+          <th>Salida</th><th>Patente</th><th>Chofer</th><th>Ruta</th><th>Producto</th>
+          <th class="num">Km</th><th class="num">Litros</th><th class="num">L/100 cargado</th><th class="num">L/100 vacío</th>
+          <th class="num">Desvío</th><th>Estado</th><th></th>
         </tr>
       </thead>
       <tbody>
@@ -57,16 +60,27 @@
           <td>{{ f.fecha_salida | fecha }}</td>
           <td><strong>{{ f.patente }}</strong></td>
           <td>{{ f.chofer }}</td>
-          <td>{{ f.cliente }}</td>
-          <td>{{ f.producto }} · {{ f.cantidad | numero(1) }} {{ f.unidad }}</td>
-          <td>{{ f.destino }}</td>
+          <td>{{ f.ruta }} <span class="etiqueta etiqueta--origen">{{ f.pais }}</span></td>
+          <td>{% if f.cantidad %}{{ f.producto }} · {{ f.cantidad | numero(1) }} {{ f.unidad }}{% else %}—{% endif %}</td>
           <td class="num">{{ f.km_recorridos | numero(0) }}</td>
           <td class="num">{{ f.litros | numero(1) }}</td>
-          <td class="num">{{ f.consumo_l100km | numero(1) }}</td>
+          <td class="num" title="Referencia: {{ f.referencia_cargado_l100km | numero(1) }}">{{ f.consumo_cargado_l100km | numero(1) }}</td>
+          <td class="num" title="Referencia: {{ f.referencia_vacio_l100km | numero(1) }}">{{ f.consumo_vacio_l100km | numero(1) }}</td>
           <td class="num">{{ m.desvio(f.desvio_pct) }}</td>
-          <td>{{ m.estado(f) }}</td>
+          <td>{{ m.estado(f) }}{% if f.viaje_id in tramo_actual %} <span class="etiqueta etiqueta--origen">{{ "Cargado" if tramo_actual[f.viaje_id] == "cargado" else "Vacío" }}</span>{% endif %}</td>
           <td>
             {% if f.estado == "en_curso" %}
+            {% if tramo_actual.get(f.viaje_id) == "cargado" %}
+            <details>
+              <summary>Registrar descarga</summary>
+              <form class="formulario--linea" method="post" action="/viajes/{{ f.viaje_id }}/tramos">
+                <input type="hidden" name="estado_carga" value="vacio">
+                <div class="campo"><label for="fd-{{ f.viaje_id }}">Descarga</label><input id="fd-{{ f.viaje_id }}" name="fecha" type="datetime-local" value="{{ ahora | fecha_input }}" required></div>
+                <div class="campo"><label for="kd-{{ f.viaje_id }}">Odómetro (km)</label><input id="kd-{{ f.viaje_id }}" name="km" type="number" step="0.1" min="0" required></div>
+                <button class="boton boton--chico" type="submit">Guardar</button>
+              </form>
+            </details>
+            {% endif %}
             <details>
               <summary>Finalizar</summary>
               <form class="formulario--linea" method="post" action="/viajes/{{ f.viaje_id }}/finalizar">

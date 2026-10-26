@@ -8,8 +8,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from flota.combustible.domain.consumo import FuenteReferencia
 from flota.combustible.domain.entidades import OrigenDato
 from flota.shared.presentation.esquemas import Esquema, Numero
+from flota.viajes.domain.entidades import EstadoCarga
 
 
 class CargaCrear(BaseModel):
@@ -44,6 +46,22 @@ class ResultadoImportacionLeer(Esquema):
     errores: list[str]
 
 
+class ReferenciaLeer(Esquema):
+    valor: Numero
+    fuente: FuenteReferencia
+
+
+class ConsumoTramoLeer(Esquema):
+    tramo_id: UUID
+    estado_carga: EstadoCarga
+    km_recorridos: Numero | None
+    litros: Numero
+    consumo_l100km: Numero | None
+    referencia: ReferenciaLeer
+    desvio_pct: Numero | None
+    alerta: bool
+
+
 class ConsumoLeer(Esquema):
     viaje_id: UUID
     camion_id: UUID
@@ -55,3 +73,4 @@ class ConsumoLeer(Esquema):
     desvio_pct: Numero | None
     litros_por_unidad: Numero | None
     alerta: bool
+    tramos: list[ConsumoTramoLeer]

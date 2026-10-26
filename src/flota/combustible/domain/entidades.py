@@ -44,6 +44,12 @@ class CargaCombustible:
         self.origen = OrigenDato(self.origen)
 
     @property
+    def cuenta_para_consumo(self) -> bool:
+        """Si la carga entra en el cálculo de L/100 km. (Con la validación de tickets, las
+        cargas pendientes o anuladas quedarán afuera.)"""
+        return True
+
+    @property
     def importe(self) -> Decimal | None:
         if self.precio_litro is None:
             return None

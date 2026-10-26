@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block titulo %}Rutas{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Rutas</h1>
+    <p>Consumo de referencia por ruta y estado de carga. Si una ruta no tiene referencia configurada, se usa su promedio histórico (con 3 viajes o más) y, si no, la del camión.</p>
+  </div>
+</div>
+
+<section class="tarjeta tarjeta--acento">
+  <h2>Rutas registradas</h2>
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr>
+          <th>Ruta</th><th>País</th><th class="num">Km estimados</th>
+          <th class="num">Ref. cargado</th><th class="num">Histórico cargado</th>
+          <th class="num">Ref. vacío</th><th class="num">Histórico vacío</th><th>Estado</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rutas %}
+        {% set h = historicos[r.id] %}
+        <tr>
+          <td><strong>{{ r.nombre }}</strong></td>
+          <td>{{ r.pais }}</td>
+          <td class="num">{{ r.km_estimados | numero(0) }}</td>
+          <td class="num">{{ r.ref_l100_cargado | numero(1) }}</td>
+          <td class="num">{{ h["cargado"].l100km | numero(1) }} <span class="ayuda">({{ h["cargado"].viajes }} viajes)</span></td>
+          <td class="num">{{ r.ref_l100_vacio | numero(1) }}</td>
+          <td class="num">{{ h["vacio"].l100km | numero(1) }} <span class="ayuda">({{ h["vacio"].viajes }} viajes)</span></td>
+          <td>{% if r.activa %}Activa{% else %}<span class="etiqueta etiqueta--finalizado">Inactiva</span>{% endif %}</td>
+          <td>
+            <details>
+              <summary>Editar</summary>
+              <form class="formulario" method="post" action="/rutas/{{ r.id }}">
+                <div class="campo"><label>Origen<input name="origen" value="{{ r.origen }}" required></label></div>
+                <div class="campo"><label>Destino<input name="destino" value="{{ r.destino }}" required></label></div>
+                <div class="campo"><label>País de destino
+                  <select name="pais">{% for p in paises %}<option value="{{ p }}" {% if p == r.pais %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></label></div>
+                <div class="campo"><label>Km estimados<input name="km_estimados" type="number" step="0.1" min="0" value="{{ r.km_estimados if r.km_estimados is not none else '' }}"></label></div>
+                <div class="campo"><label>Ref. L/100 cargado<input name="ref_l100_cargado" type="number" step="0.1" min="0" value="{{ r.ref_l100_cargado if r.ref_l100_cargado is not none else '' }}"></label></div>
+                <div class="campo"><label>Ref. L/100 vacío<input name="ref_l100_vacio" type="number" step="0.1" min="0" value="{{ r.ref_l100_vacio if r.ref_l100_vacio is not none else '' }}"></label></div>
+                <div class="campo"><label><input type="checkbox" name="activa" value="true" {% if r.activa %}checked{% endif %}> Activa</label></div>
+                <div class="formulario__acciones"><button class="boton boton--chico" type="submit">Guardar</button></div>
+              </form>
+            </details>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="vacio">Todavía no hay rutas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="tarjeta">
+  <details {% if not rutas %}open{% endif %}>
+    <summary>+ Nueva ruta</summary>
+    <form class="formulario" method="post" action="/rutas">
+      <div class="campo"><label for="origen">Origen</label><input id="origen" name="origen" required placeholder="Planta Albardón (SJ)"></div>
+      <div class="campo"><label for="destino">Destino</label><input id="destino" name="destino" required placeholder="Los Andes (CL)"></div>
+      <div class="campo"><label for="pais">País de destino</label>
+        <select id="pais" name="pais">{% for p in paises %}<option value="{{ p }}">{{ p }}</option>{% endfor %}</select></div>
+      <div class="campo"><label for="km_estimados">Km estimados</label><input id="km_estimados" name="km_estimados" type="number" step="0.1" min="0"></div>
+      <div class="campo"><label for="ref_l100_cargado">Ref. L/100 cargado</label><input id="ref_l100_cargado" name="ref_l100_cargado" type="number" step="0.1" min="0"></div>
+      <div class="campo"><label for="ref_l100_vacio">Ref. L/100 vacío</label><input id="ref_l100_vacio" name="ref_l100_vacio" type="number" step="0.1" min="0"></div>
+      <div class="formulario__acciones"><button class="boton" type="submit">Guardar ruta</button></div>
+    </form>
+  </details>
+</section>
+{% endblock %}

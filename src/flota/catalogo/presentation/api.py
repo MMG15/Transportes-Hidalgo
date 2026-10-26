@@ -5,6 +5,8 @@ from uuid import UUID
 from fastapi import APIRouter
 
 from flota.catalogo.application.casos_de_uso import (
+    ActualizarCamion,
+    CambiosCamion,
     ConsultasCatalogo,
     DatosCamion,
     DatosChofer,
@@ -16,6 +18,7 @@ from flota.catalogo.application.casos_de_uso import (
     RegistrarProducto,
 )
 from flota.catalogo.presentation.esquemas import (
+    CamionActualizar,
     CamionCrear,
     CamionLeer,
     ChoferCrear,
@@ -46,6 +49,13 @@ def listar_camiones(uow: UoW, limite: int = Limite, desplazamiento: int = Despla
 @router.get("/camiones/{camion_id}", response_model=CamionLeer, tags=["Camiones"])
 def obtener_camion(camion_id: UUID, uow: UoW):
     return CamionLeer.model_validate(ConsultasCatalogo(uow).obtener_camion(camion_id))
+
+
+@router.put("/camiones/{camion_id}", response_model=CamionLeer, tags=["Camiones"])
+def actualizar_camion(camion_id: UUID, datos: CamionActualizar, uow: UoW):
+    """Edición y baja lógica (activo = false)."""
+    camion = ActualizarCamion(uow).ejecutar(camion_id, CambiosCamion(**datos.model_dump()))
+    return CamionLeer.model_validate(camion)
 
 
 @router.post("/choferes", response_model=ChoferLeer, status_code=201, tags=["Choferes"])

@@ -13,7 +13,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
-from flota.reportes.application.dto import ReporteConsumo
+from flota.reportes.application.dto import ReporteConsumo, ResumenGrupo
 from flota.reportes.application.puertos import GeneradorReporte
 from flota.marca import NOMBRE_EMPRESA, color_excel
 
@@ -49,6 +49,8 @@ class GeneradorReporteExcel(GeneradorReporte):
         libro = Workbook()
         self._hoja_resumen(libro.active, reporte)
         self._hoja_viajes(libro.create_sheet("Consumo por viaje"), reporte)
+        self._hoja_grupo(libro.create_sheet("Por chofer"), "Chofer", reporte.resumen_por_chofer)
+        self._hoja_grupo(libro.create_sheet("Por ruta"), "Ruta", reporte.resumen_por_ruta)
         libro.save(destino)
 
     def _hoja_resumen(self, hoja: Worksheet, reporte: ReporteConsumo) -> None:
@@ -111,18 +113,23 @@ class GeneradorReporteExcel(GeneradorReporte):
             ("Estado", 11, None),
             ("Patente", 10, None),
             ("Chofer", 22, None),
-            ("Cliente", 28, None),
+            ("Ruta", 30, None),
+            ("País", 6, None),
+            ("Cliente", 24, None),
             ("Producto", 16, None),
             ("Cantidad", 10, _FORMATO_NUM),
             ("Unidad", 7, None),
-            ("Origen", 18, None),
-            ("Destino", 18, None),
             ("Km", 10, _FORMATO_NUM),
             ("Litros", 10, _FORMATO_NUM),
             ("Costo $", 13, _FORMATO_NUM),
             ("L/100km", 10, _FORMATO_NUM),
             ("Ref. L/100km", 12, _FORMATO_NUM),
             ("Desvío", 9, _FORMATO_PCT),
+            ("L/100 cargado", 12, _FORMATO_NUM),
+            ("Ref. cargado", 12, _FORMATO_NUM),
+            ("L/100 vacío", 11, _FORMATO_NUM),
+            ("Ref. vacío", 11, _FORMATO_NUM),
+            ("Referencia", 14, None),
             ("L por unidad", 12, _FORMATO_NUM),
             ("Alerta", 8, None),
         ]
@@ -135,18 +142,23 @@ class GeneradorReporteExcel(GeneradorReporte):
                     f.estado,
                     f.patente,
                     f.chofer,
+                    f.ruta,
+                    f.pais,
                     f.cliente,
                     f.producto,
                     f.cantidad,
                     f.unidad,
-                    f.origen,
-                    f.destino,
                     f.km_recorridos,
                     f.litros,
                     f.costo,
                     f.consumo_l100km,
                     f.consumo_referencia_l100km,
                     f.desvio_pct,
+                    f.consumo_cargado_l100km,
+                    f.referencia_cargado_l100km,
+                    f.consumo_vacio_l100km,
+                    f.referencia_vacio_l100km,
+                    f.fuente_referencia,
                     f.litros_por_unidad,
                     "SÍ" if f.alerta else "",
                 ]
@@ -155,6 +167,36 @@ class GeneradorReporteExcel(GeneradorReporte):
                 for celda in hoja[hoja.max_row]:
                     celda.fill = _ALERTA_FONDO
                 hoja.cell(hoja.max_row, len(columnas)).font = _ALERTA_FUENTE
+        _aplicar_formatos(hoja, columnas, 1)
+
+    def _hoja_grupo(self, hoja: Worksheet, titulo: str, grupos: list[ResumenGrupo]) -> None:
+        """RF-12: consumo agrupado por chofer o por ruta."""
+        columnas: Columnas = [
+            (titulo, 32, None),
+            ("Viajes", 9, None),
+            ("Km", 12, _FORMATO_NUM),
+            ("Litros", 12, _FORMATO_NUM),
+            ("Costo $", 15, _FORMATO_NUM),
+            ("L/100km promedio", 16, _FORMATO_NUM),
+            ("L/100 cargado", 14, _FORMATO_NUM),
+            ("L/100 vacío", 13, _FORMATO_NUM),
+            ("Viajes con alerta", 16, None),
+        ]
+        _escribir_encabezado(hoja, columnas, 1)
+        for g in grupos:
+            hoja.append(
+                [
+                    g.nombre,
+                    g.viajes,
+                    g.km_recorridos,
+                    g.litros,
+                    g.costo,
+                    g.consumo_promedio_l100km,
+                    g.consumo_cargado_l100km,
+                    g.consumo_vacio_l100km,
+                    g.viajes_con_alerta,
+                ]
+            )
         _aplicar_formatos(hoja, columnas, 1)
 
 

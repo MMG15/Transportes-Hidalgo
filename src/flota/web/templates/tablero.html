@@ -22,12 +22,12 @@
     <h2>Viajes en curso</h2>
     <div class="tabla-contenedor">
       <table>
-        <thead><tr><th>Salida</th><th>Patente</th><th>Chofer</th><th>Destino</th><th class="num">Litros</th></tr></thead>
+        <thead><tr><th>Salida</th><th>Patente</th><th>Chofer</th><th>Ruta</th><th class="num">Litros</th></tr></thead>
         <tbody>
           {% for f in en_curso %}
           <tr>
             <td>{{ f.fecha_salida | fecha }}</td><td><strong>{{ f.patente }}</strong></td>
-            <td>{{ f.chofer }}</td><td>{{ f.destino }}</td><td class="num">{{ f.litros | numero(1) }}</td>
+            <td>{{ f.chofer }}</td><td>{{ f.ruta }}</td><td class="num">{{ f.litros | numero(1) }}</td>
           </tr>
           {% else %}
           <tr><td colspan="5" class="vacio">No hay viajes en curso.</td></tr>

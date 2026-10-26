@@ -27,6 +27,7 @@ CARPETA_WEB = Path(__file__).parent
 MENU = [
     ("/", "Tablero"),
     ("/viajes", "Viajes"),
+    ("/rutas", "Rutas"),
     ("/combustible", "Combustible"),
     ("/reportes", "Reportes"),
     ("/catalogo", "Flota y clientes"),

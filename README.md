@@ -4,7 +4,7 @@
 
 Control de viajes de camiones (distribución de cal y otros productos) y del **consumo de combustible por viaje**.
 
-- **Panel web** en http://127.0.0.1:8000 — tablero, viajes, combustible, reportes y catálogo.
+- **Panel web** en http://127.0.0.1:8000 — tablero, viajes, rutas, combustible, reportes y catálogo.
 - **API REST** en http://127.0.0.1:8000/docs
 - **Reportes Excel** con la identidad de la empresa.
 - **Documento de requisitos v1.1** (referencia funcional del sistema): [`docs/requisitos_v1.1.md`](docs/requisitos_v1.1.md) · [versión Word](docs/word/Requisitos_Sistema_Trazabilidad_Hidalgo_v1.1.docx) · análisis de brechas código ↔ requisitos en [`docs/brechas-requisitos-v1.1.md`](docs/brechas-requisitos-v1.1.md).
@@ -23,33 +23,25 @@ Control de viajes de camiones (distribución de cal y otros productos) y del **c
 Definida en un único lugar: [`src/flota/marca/__init__.py`](src/flota/marca/__init__.py). La usan el CSS del panel
 (se inyecta como variables CSS) y el generador de Excel.
 
-## Arquitectura limpia
+## Arquitectura limpia, organizada por módulo
 
 ```
 src/flota/
-├── domain/            Reglas del negocio. No depende de nada.
-│   ├── entities.py        Camion, Chofer, Cliente, Producto, Viaje, CargaCombustible
-│   ├── consumo.py         Cálculo de L/100km, desvío y alertas
-│   ├── repositories.py    Puertos (interfaces) de persistencia
-│   └── exceptions.py
-├── application/       Casos de uso. Depende sólo del dominio.
-│   ├── ports.py           UnidadDeTrabajo, LectorCargas, GeneradorReporte
-│   ├── dto.py
-│   └── use_cases/         catalogo, viajes, combustible, importacion, reportes
-├── infrastructure/    Adaptadores: PostgreSQL, Excel, CSV, configuración.
-│   ├── db/                Modelos SQLAlchemy, repositorios, unidad de trabajo
-│   ├── importacion/       Lectores de Excel y CSV de tarjetas de combustible
-│   └── excel/             Generador del reporte Excel
-├── presentation/      Entradas al sistema.
-│   ├── api/               API REST (FastAPI)
-│   ├── web/               Panel web (Jinja2 + CSS con la paleta de marca)
-│   └── cli.py             Comandos de consola (automatización)
-├── marca/             Colores y logos de Transportes Hidalgo
-└── bootstrap.py       Raíz de composición: conecta puertos con adaptadores
+├── shared/        Común: errores, validaciones, Repositorio[E], UnidadDeTrabajo, base de datos, config
+├── catalogo/      MOD-01  Camiones, choferes, clientes y productos
+├── viajes/        MOD-02  Rutas, viajes y tramos cargado / vacío
+├── combustible/   MOD-03  Cargas, importación de tarjeta y cálculo de consumo por tramo
+├── reportes/      MOD-12  Tablero, reportes filtrables y Excel
+├── web/           Plantillas Jinja2 y estilos del panel
+├── marca/         Colores y logos de Transportes Hidalgo
+├── bootstrap.py   Raíz de composición: conecta puertos con adaptadores
+└── main.py · cli.py · unidad_de_trabajo.py · dependencias.py · modelos.py
 ```
 
-Regla de dependencias: las flechas apuntan siempre hacia adentro
-(`presentation → application → domain`; `infrastructure` implementa los puertos).
+Cada módulo tiene sus capas: `domain/` (reglas, sin dependencias) → `application/` (casos de uso y
+puertos) → `infrastructure/` (SQLAlchemy, archivos) y `presentation/` (API, panel).
+Regla de dependencias: las flechas apuntan siempre hacia el dominio.
+Detalle completo en la [guía técnica](docs/guia-tecnica.md).
 
 ## Puesta en marcha
 
@@ -90,7 +82,10 @@ schtasks /Create /TN "Flota - Reporte" /SC DAILY /ST 07:00 /TR "cmd /c cd /d C:\
 
 ## Cómo se calcula el consumo
 
-- Cada carga de combustible se asigna automáticamente al viaje que el camión tenía en curso en esa fecha.
-- `L/100km = litros cargados en el viaje / km recorridos × 100`
-- `desvío % = (consumo real − consumo de referencia) / referencia × 100`
-- Si el desvío supera `UMBRAL_DESVIO_PCT` (15 % por defecto), el viaje se marca con **alerta**.
+- Cada viaje se divide en **tramos** cargado / vacío (al descargar empieza el regreso vacío).
+- Cada carga se asigna al viaje que el camión tenía en curso y, dentro de él, al tramo de su fecha.
+- `L/100km = litros cargados en el tramo / km del tramo × 100` (y lo mismo para el viaje completo).
+- Referencia de cada tramo: la **configurada en la ruta** → el **promedio histórico de la ruta**
+  (3 viajes o más) → la **referencia del camión** (respaldo).
+- `desvío % = (consumo real − referencia) / referencia × 100`. Si supera `UMBRAL_DESVIO_PCT`
+  (15 % por defecto) y la referencia es de la ruta, el viaje se marca con **alerta**.

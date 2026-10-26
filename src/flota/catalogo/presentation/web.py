@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 
 from flota.catalogo.application.casos_de_uso import (
+    ActualizarCamion,
+    ActualizarChofer,
+    CambiosCamion,
     ConsultasCatalogo,
     DatosCamion,
     DatosChofer,
@@ -19,7 +23,14 @@ from flota.catalogo.application.casos_de_uso import (
     RegistrarProducto,
 )
 from flota.dependencias import UoW
-from flota.web.plantillas import Numero, Texto, TextoOpcional, ejecutar, pagina
+from flota.web.plantillas import (
+    Numero,
+    Texto,
+    TextoOpcional,
+    decimal_opcional,
+    ejecutar,
+    pagina,
+)
 
 router = APIRouter(include_in_schema=False)  # no aparece en la documentación de la API
 
@@ -38,6 +49,10 @@ def catalogo(request: Request, uow: UoW):
     )
 
 
+def _entero_opcional(valor: str | None) -> int | None:
+    return int(valor) if valor and valor.strip().isdigit() else None
+
+
 @router.post("/catalogo/camiones")
 def alta_camion(
     uow: UoW,
@@ -46,12 +61,57 @@ def alta_camion(
     modelo: Texto,
     capacidad_tanque_litros: Numero,
     consumo_referencia_l100km: Numero,
+    anio: TextoOpcional = None,
+    km_actual: TextoOpcional = None,
 ):
     datos = DatosCamion(
-        patente, marca_camion, modelo, capacidad_tanque_litros, consumo_referencia_l100km
+        patente,
+        marca_camion,
+        modelo,
+        capacidad_tanque_litros,
+        consumo_referencia_l100km,
+        anio=_entero_opcional(anio),
+        km_actual=decimal_opcional(km_actual),
     )
     return ejecutar(
         "/catalogo", lambda: RegistrarCamion(uow).ejecutar(datos), f"Camión {patente} registrado."
+    )
+
+
+@router.post("/catalogo/camiones/{camion_id}")
+def editar_camion(
+    camion_id: UUID,
+    uow: UoW,
+    marca_camion: Annotated[str, Form(alias="marca")],
+    modelo: Texto,
+    capacidad_tanque_litros: Numero,
+    consumo_referencia_l100km: Numero,
+    anio: TextoOpcional = None,
+    activo: Annotated[bool, Form()] = False,  # un checkbox sin tildar no se envía
+):
+    cambios = CambiosCamion(
+        marca_camion,
+        modelo,
+        capacidad_tanque_litros,
+        consumo_referencia_l100km,
+        _entero_opcional(anio),
+        activo,
+    )
+    return ejecutar(
+        "/catalogo",
+        lambda: ActualizarCamion(uow).ejecutar(camion_id, cambios),
+        "Camión actualizado.",
+    )
+
+
+@router.post("/catalogo/choferes/{chofer_id}")
+def editar_chofer(
+    chofer_id: UUID, uow: UoW, nombre: Texto, activo: Annotated[bool, Form()] = False
+):
+    return ejecutar(
+        "/catalogo",
+        lambda: ActualizarChofer(uow).ejecutar(chofer_id, nombre, activo),
+        "Chofer actualizado.",
     )
 
 

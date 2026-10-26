@@ -13,12 +13,32 @@
     <h2>Camiones</h2>
     <div class="tabla-contenedor">
       <table>
-        <thead><tr><th>Patente</th><th>Marca y modelo</th><th class="num">Tanque</th><th class="num">Ref. L/100km</th></tr></thead>
+        <thead><tr><th>Patente</th><th>Marca y modelo</th><th class="num">Año</th><th class="num">Tanque</th><th class="num">Ref. L/100km</th><th class="num">Km actual</th><th></th></tr></thead>
         <tbody>
           {% for c in camiones %}
-          <tr><td><strong>{{ c.patente }}</strong></td><td>{{ c.marca }} {{ c.modelo }}</td>
-            <td class="num">{{ c.capacidad_tanque_litros | numero(0) }} L</td><td class="num">{{ c.consumo_referencia_l100km | numero(1) }}</td></tr>
-          {% else %}<tr><td colspan="4" class="vacio">Sin camiones.</td></tr>{% endfor %}
+          <tr>
+            <td><strong>{{ c.patente }}</strong>{% if not c.activo %} <span class="etiqueta etiqueta--finalizado">Inactivo</span>{% endif %}</td>
+            <td>{{ c.marca }} {{ c.modelo }}</td>
+            <td class="num">{{ c.anio or "—" }}</td>
+            <td class="num">{{ c.capacidad_tanque_litros | numero(0) }} L</td>
+            <td class="num">{{ c.consumo_referencia_l100km | numero(1) }}</td>
+            <td class="num">{{ c.km_actual | numero(0) }}</td>
+            <td>
+              <details>
+                <summary>Editar</summary>
+                <form class="formulario" method="post" action="/catalogo/camiones/{{ c.id }}">
+                  <div class="campo"><label>Marca<input name="marca" value="{{ c.marca }}" required></label></div>
+                  <div class="campo"><label>Modelo<input name="modelo" value="{{ c.modelo }}" required></label></div>
+                  <div class="campo"><label>Año<input name="anio" type="number" min="1950" max="2100" value="{{ c.anio or '' }}"></label></div>
+                  <div class="campo"><label>Tanque (L)<input name="capacidad_tanque_litros" type="number" step="1" min="1" value="{{ c.capacidad_tanque_litros }}" required></label></div>
+                  <div class="campo"><label>Ref. L/100km<input name="consumo_referencia_l100km" type="number" step="0.1" min="0.1" value="{{ c.consumo_referencia_l100km }}" required></label></div>
+                  <div class="campo"><label><input type="checkbox" name="activo" value="true" {% if c.activo %}checked{% endif %}> Activo</label></div>
+                  <div class="formulario__acciones"><button class="boton boton--chico" type="submit">Guardar</button></div>
+                </form>
+              </details>
+            </td>
+          </tr>
+          {% else %}<tr><td colspan="7" class="vacio">Sin camiones.</td></tr>{% endfor %}
         </tbody>
       </table>
     </div>
@@ -28,10 +48,13 @@
         <div class="campo"><label for="patente">Patente</label><input id="patente" name="patente" required minlength="6" maxlength="15" placeholder="AB123CD"></div>
         <div class="campo"><label for="marca">Marca</label><input id="marca" name="marca" required></div>
         <div class="campo"><label for="modelo">Modelo</label><input id="modelo" name="modelo" required></div>
+        <div class="campo"><label for="anio">Año</label><input id="anio" name="anio" type="number" min="1950" max="2100"></div>
         <div class="campo"><label for="capacidad">Tanque (litros)</label><input id="capacidad" name="capacidad_tanque_litros" type="number" step="1" min="1" required></div>
         <div class="campo"><label for="referencia">Consumo de referencia (L/100km)</label><input id="referencia" name="consumo_referencia_l100km" type="number" step="0.1" min="0.1" required></div>
+        <div class="campo"><label for="km_actual">Odómetro actual (km)</label><input id="km_actual" name="km_actual" type="number" step="0.1" min="0"></div>
         <div class="formulario__acciones"><button class="boton" type="submit">Guardar camión</button></div>
       </form>
+      <p class="ayuda">La referencia del camión es el respaldo: se usa sólo si la ruta no tiene referencia propia ni historial.</p>
     </details>
   </section>
 
@@ -39,10 +62,24 @@
     <h2>Choferes</h2>
     <div class="tabla-contenedor">
       <table>
-        <thead><tr><th>Nombre</th><th>DNI</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>DNI</th><th></th></tr></thead>
         <tbody>
-          {% for c in choferes %}<tr><td>{{ c.nombre }}</td><td>{{ c.dni }}</td></tr>
-          {% else %}<tr><td colspan="2" class="vacio">Sin choferes.</td></tr>{% endfor %}
+          {% for c in choferes %}
+          <tr>
+            <td>{{ c.nombre }}{% if not c.activo %} <span class="etiqueta etiqueta--finalizado">Inactivo</span>{% endif %}</td>
+            <td>{{ c.dni }}</td>
+            <td>
+              <details>
+                <summary>Editar</summary>
+                <form class="formulario--linea" method="post" action="/catalogo/choferes/{{ c.id }}">
+                  <div class="campo"><label>Nombre<input name="nombre" value="{{ c.nombre }}" required></label></div>
+                  <div class="campo"><label><input type="checkbox" name="activo" value="true" {% if c.activo %}checked{% endif %}> Activo</label></div>
+                  <button class="boton boton--chico" type="submit">Guardar</button>
+                </form>
+              </details>
+            </td>
+          </tr>
+          {% else %}<tr><td colspan="3" class="vacio">Sin choferes.</td></tr>{% endfor %}
         </tbody>
       </table>
     </div>

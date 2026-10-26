@@ -14,7 +14,7 @@ from flota.catalogo.domain.repositorios import (
 from flota.combustible.domain.repositorios import RepositorioCargas
 from flota.shared.application.unidad_de_trabajo import UnidadDeTrabajoBase
 from flota.viajes.domain.entidades import EstadoViaje
-from flota.viajes.domain.repositorios import RepositorioViajes
+from flota.viajes.domain.repositorios import RepositorioRutas, RepositorioViajes
 
 
 class _EnMemoria:
@@ -35,15 +35,18 @@ class _EnMemoria:
     def _filtrar(self, condicion):
         return [copy.deepcopy(e) for e in self.datos.values() if condicion(e)]
 
+    def _primero(self, condicion):
+        return next(iter(self._filtrar(condicion)), None)
+
 
 class CamionesFake(_EnMemoria, RepositorioCamiones):
     def obtener_por_patente(self, patente):
-        return next(iter(self._filtrar(lambda c: c.patente == patente)), None)
+        return self._primero(lambda c: c.patente == patente)
 
 
 class ChoferesFake(_EnMemoria, RepositorioChoferes):
     def obtener_por_dni(self, dni):
-        return next(iter(self._filtrar(lambda c: c.dni == dni)), None)
+        return self._primero(lambda c: c.dni == dni)
 
 
 class ClientesFake(_EnMemoria, RepositorioClientes):
@@ -52,36 +55,45 @@ class ClientesFake(_EnMemoria, RepositorioClientes):
 
 class ProductosFake(_EnMemoria, RepositorioProductos):
     def obtener_por_nombre(self, nombre):
-        return next(iter(self._filtrar(lambda p: p.nombre == nombre)), None)
+        return self._primero(lambda p: p.nombre == nombre)
+
+
+class RutasFake(_EnMemoria, RepositorioRutas):
+    def obtener_por_origen_destino(self, origen, destino):
+        return self._primero(lambda r: (r.origen, r.destino) == (origen, destino))
 
 
 class ViajesFake(_EnMemoria, RepositorioViajes):
-    def listar_por_periodo(self, desde, hasta, camion_id=None):
+    def listar_por_periodo(self, desde, hasta, camion_id=None, chofer_id=None, ruta_id=None):
         return sorted(
             self._filtrar(
                 lambda v: (
                     desde <= v.fecha_salida < hasta
                     and (camion_id is None or v.camion_id == camion_id)
+                    and (chofer_id is None or v.chofer_id == chofer_id)
+                    and (ruta_id is None or v.ruta_id == ruta_id)
                 )
             ),
             key=lambda v: v.fecha_salida,
         )
 
     def buscar_en_curso(self, camion_id):
-        return next(
-            iter(
-                self._filtrar(
-                    lambda v: v.camion_id == camion_id and v.estado == EstadoViaje.EN_CURSO
-                )
-            ),
-            None,
+        return self._primero(
+            lambda v: v.camion_id == camion_id and v.estado == EstadoViaje.EN_CURSO
         )
 
     def buscar_por_camion_y_fecha(self, camion_id, fecha):
-        return next(
-            iter(self._filtrar(lambda v: v.camion_id == camion_id and v.incluye_fecha(fecha))),
-            None,
+        return self._primero(lambda v: v.camion_id == camion_id and v.incluye_fecha(fecha))
+
+    def listar_finalizados_por_ruta(self, ruta_id, antes_de=None, limite=20):
+        viajes = self._filtrar(
+            lambda v: (
+                v.ruta_id == ruta_id
+                and v.estado == EstadoViaje.FINALIZADO
+                and (antes_de is None or v.fecha_salida < antes_de)
+            )
         )
+        return sorted(viajes, key=lambda v: v.fecha_salida, reverse=True)[:limite]
 
 
 class CargasFake(_EnMemoria, RepositorioCargas):
@@ -106,6 +118,7 @@ class UnidadDeTrabajoFake(UnidadDeTrabajoBase):
         self.choferes = ChoferesFake()
         self.clientes = ClientesFake()
         self.productos = ProductosFake()
+        self.rutas = RutasFake()
         self.viajes = ViajesFake()
         self.cargas = CargasFake()
         self.commits = 0

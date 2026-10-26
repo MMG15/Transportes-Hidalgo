@@ -16,7 +16,7 @@ def enviar(cliente, ruta, datos):
 
 
 def test_paginas_cargan_con_la_marca(cliente):
-    for ruta in ("/", "/viajes", "/combustible", "/reportes", "/catalogo"):
+    for ruta in ("/", "/viajes", "/rutas", "/combustible", "/reportes", "/catalogo"):
         respuesta = cliente.get(ruta)
         assert respuesta.status_code == 200, ruta
         assert "/static/img/logo-hidalgo.png" in respuesta.text
@@ -49,54 +49,68 @@ def test_flujo_completo_desde_el_panel(cliente):
     enviar(cliente, "/catalogo/clientes", {"razon_social": "Agropecuaria San José", "cuit": ""})
     enviar(cliente, "/catalogo/productos", {"nombre": "Cal viva", "unidad": "tn"})
 
+    pagina = enviar(
+        cliente,
+        "/rutas",
+        {"origen": "Albardón", "destino": "Mendoza", "pais": "AR", "ref_l100_cargado": "38"},
+    )
+    assert "Ruta Albardón → Mendoza creada" in pagina.text
+
     ids = {
         nombre: cliente.get(f"/api/v1/{nombre}").json()[0]["id"]
-        for nombre in ("camiones", "choferes", "clientes", "productos")
+        for nombre in ("camiones", "choferes", "clientes", "productos", "rutas")
     }
     salida = datetime.now().replace(second=0, microsecond=0) - timedelta(hours=6)
+
+    def hora(horas: int) -> str:
+        return (salida + timedelta(hours=horas)).strftime("%Y-%m-%dT%H:%M")
+
     pagina = enviar(
         cliente,
         "/viajes",
         {
             "camion_id": ids["camiones"],
             "chofer_id": ids["choferes"],
+            "ruta_id": ids["rutas"],
+            "estado_carga": "cargado",
             "cliente_id": ids["clientes"],
             "producto_id": ids["productos"],
-            "origen": "Planta",
-            "destino": "Campo",
             "cantidad": "28",
-            "fecha_salida": salida.strftime("%Y-%m-%dT%H:%M"),
+            "fecha_salida": hora(0),
             "km_salida": "1000",
         },
     )
     assert "Viaje iniciado" in pagina.text and "En curso" in pagina.text
+    assert "Registrar descarga" in pagina.text
 
-    # Carga manual con campos opcionales vacíos
-    pagina = enviar(
-        cliente,
-        "/combustible",
-        {
-            "camion_id": ids["camiones"],
-            "fecha": (salida + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"),
-            "litros": "170",
-            "precio_litro": "",
-            "odometro_km": "",
-            "estacion": "",
-            "referencia_externa": "",
-        },
-    )
-    assert "Carga registrada" in pagina.text and "Asignada" in pagina.text
+    # Cargas manuales con campos opcionales vacíos: una en la ida y otra en el regreso
+    for horas in (1, 4):
+        pagina = enviar(
+            cliente,
+            "/combustible",
+            {
+                "camion_id": ids["camiones"],
+                "fecha": hora(horas),
+                "litros": "85",
+                "precio_litro": "",
+                "odometro_km": "",
+                "estacion": "",
+                "referencia_externa": "",
+            },
+        )
+        assert "Carga registrada" in pagina.text and "Asignada" in pagina.text
 
     viaje_id = cliente.get(
         "/api/v1/viajes", params={"desde": salida.date(), "hasta": salida.date()}
     ).json()[0]["id"]
     pagina = enviar(
         cliente,
-        f"/viajes/{viaje_id}/finalizar",
-        {
-            "fecha_llegada": (salida + timedelta(hours=5)).strftime("%Y-%m-%dT%H:%M"),
-            "km_llegada": "1400",
-        },
+        f"/viajes/{viaje_id}/tramos",
+        {"fecha": hora(3), "km": "1200", "estado_carga": "vacio"},
+    )
+    assert "Descarga registrada" in pagina.text
+    pagina = enviar(
+        cliente, f"/viajes/{viaje_id}/finalizar", {"fecha_llegada": hora(5), "km_llegada": "1400"}
     )
     assert "Viaje finalizado" in pagina.text
 
@@ -107,6 +121,49 @@ def test_flujo_completo_desde_el_panel(cliente):
 
     reportes = cliente.get("/reportes").text
     assert "/api/v1/reportes/consumo.xlsx?desde=" in reportes
+    assert "Albardón → Mendoza" in reportes
+    filtrado = cliente.get("/reportes", params={"pais": "CL"}).text
+    assert "No hay viajes con esos filtros" in filtrado
+
+
+def test_editar_ruta_y_camion_desde_el_panel(cliente):
+    enviar(cliente, "/rutas", {"origen": "A", "destino": "B", "pais": "AR"})
+    ruta_id = cliente.get("/api/v1/rutas").json()[0]["id"]
+    pagina = enviar(
+        cliente,
+        f"/rutas/{ruta_id}",
+        {"origen": "A", "destino": "B", "pais": "CL", "ref_l100_vacio": "30"},
+    )  # sin "activa": el checkbox destildado no se envía
+    assert "Ruta actualizada" in pagina.text
+    ruta = cliente.get("/api/v1/rutas").json()[0]
+    assert (ruta["pais"], ruta["ref_l100_vacio"], ruta["activa"]) == ("CL", 30.0, False)
+
+    enviar(
+        cliente,
+        "/catalogo/camiones",
+        {
+            "patente": "AB123CD",
+            "marca": "Scania",
+            "modelo": "R450",
+            "capacidad_tanque_litros": "600",
+            "consumo_referencia_l100km": "38",
+            "anio": "",
+        },
+    )
+    camion_id = cliente.get("/api/v1/camiones").json()[0]["id"]
+    pagina = enviar(
+        cliente,
+        f"/catalogo/camiones/{camion_id}",
+        {
+            "marca": "Scania",
+            "modelo": "R500",
+            "capacidad_tanque_litros": "600",
+            "consumo_referencia_l100km": "38",
+            "anio": "2020",
+            "activo": "true",
+        },
+    )
+    assert "Camión actualizado" in pagina.text and "R500" in pagina.text
 
 
 def test_error_de_negocio_se_muestra_en_la_pagina(cliente):

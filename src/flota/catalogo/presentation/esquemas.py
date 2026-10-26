@@ -16,6 +16,17 @@ class CamionCrear(BaseModel):
     modelo: str = Field(examples=["R450"])
     capacidad_tanque_litros: Decimal = Field(gt=0, examples=[600])
     consumo_referencia_l100km: Decimal = Field(gt=0, examples=[38])
+    anio: int | None = Field(default=None, ge=1950, le=2100, examples=[2019])
+    km_actual: Decimal | None = Field(default=None, ge=0, examples=[125000])
+
+
+class CamionActualizar(BaseModel):
+    marca: str
+    modelo: str
+    capacidad_tanque_litros: Decimal = Field(gt=0)
+    consumo_referencia_l100km: Decimal = Field(gt=0)
+    anio: int | None = Field(default=None, ge=1950, le=2100)
+    activo: bool = True
 
 
 class CamionLeer(Esquema):
@@ -23,8 +34,10 @@ class CamionLeer(Esquema):
     patente: str
     marca: str
     modelo: str
+    anio: int | None
     capacidad_tanque_litros: Numero
     consumo_referencia_l100km: Numero
+    km_actual: Numero | None
     activo: bool
 
 
