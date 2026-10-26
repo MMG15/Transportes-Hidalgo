@@ -245,7 +245,10 @@ def crear_plantilla(destino: Path) -> None:
 
 def documentos() -> list[tuple[Path, Path]]:
     """Pares (markdown de origen, word de destino)."""
-    pares = [(DOCS / "guia-tecnica.md", SALIDA / "Guia-tecnica.docx")]
+    pares = [
+        (DOCS / "guia-tecnica.md", SALIDA / "Guia-tecnica.docx"),
+        (DOCS / "curso-python.md", SALIDA / "Curso-Python.docx"),
+    ]
     for md in sorted((DOCS / "sesiones").glob("*.md")):
         pares.append((md, SALIDA / f"Sesion-{md.stem}.docx"))
     return pares
