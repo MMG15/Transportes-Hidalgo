@@ -2,8 +2,8 @@ from logging.config import fileConfig
 
 from alembic import context
 
-from flota.infrastructure.db.models import Base
-from flota.infrastructure.db.session import crear_engine
+from flota.modelos import Base
+from flota.shared.infrastructure.db import crear_engine
 
 config = context.config
 if config.config_file_name is not None:
@@ -14,7 +14,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """Genera el SQL sin conectarse (uv run alembic upgrade head --sql)."""
-    from flota.infrastructure.config import get_settings
+    from flota.shared.infrastructure.config import get_settings
 
     context.configure(
         url=get_settings().url_db(),

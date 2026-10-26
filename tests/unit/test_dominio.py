@@ -4,9 +4,11 @@ from uuid import uuid4
 
 import pytest
 
-from flota.domain.consumo import calcular_consumo
-from flota.domain.entities import Camion, CargaCombustible, EstadoViaje, Viaje
-from flota.domain.exceptions import DatosInvalidos, ReglaNegocioViolada
+from flota.catalogo.domain.entidades import Camion
+from flota.combustible.domain.consumo import calcular_consumo
+from flota.combustible.domain.entidades import CargaCombustible
+from flota.shared.domain.errores import DatosInvalidos, ReglaNegocioViolada
+from flota.viajes.domain.entidades import EstadoViaje, Viaje
 
 SALIDA = datetime(2026, 10, 1, 8, 0)
 

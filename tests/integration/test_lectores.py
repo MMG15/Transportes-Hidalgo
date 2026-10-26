@@ -3,9 +3,9 @@ from decimal import Decimal
 
 from openpyxl import Workbook
 
-from flota.application.dto import ErrorLectura, FilaCarga
-from flota.infrastructure.importacion import LectorCsv, LectorExcel
-from flota.infrastructure.importacion.mapeo import a_decimal
+from flota.combustible.application.dto import ErrorLectura, FilaCarga
+from flota.combustible.infrastructure.importacion import LectorCsv, LectorExcel
+from flota.combustible.infrastructure.importacion.mapeo import a_decimal
 
 
 def test_numeros_en_formato_argentino_e_ingles():

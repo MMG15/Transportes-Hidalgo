@@ -1,1 +1,0 @@
-"""Generación de planillas Excel."""

@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-flota = "flota.presentation.cli:app"
+flota = "flota.cli:app"
 
 [dependency-groups]
 dev = [

@@ -3,9 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from flota.application.dto import ErrorLectura, FilaCarga
-from flota.application.ports import LectorCargas
-from flota.application.use_cases.catalogo import (
+from flota.catalogo.application.casos_de_uso import (
     DatosCamion,
     DatosChofer,
     DatosCliente,
@@ -15,11 +13,13 @@ from flota.application.use_cases.catalogo import (
     RegistrarCliente,
     RegistrarProducto,
 )
-from flota.application.use_cases.combustible import DatosCarga, RegistrarCargaCombustible
-from flota.application.use_cases.importacion import ImportarCargas
-from flota.application.use_cases.reportes import GenerarReporteConsumo
-from flota.application.use_cases.viajes import DatosInicioViaje, FinalizarViaje, IniciarViaje
-from flota.domain.exceptions import Duplicado, ReglaNegocioViolada
+from flota.combustible.application.casos_de_uso import DatosCarga, RegistrarCargaCombustible
+from flota.combustible.application.dto import ErrorLectura, FilaCarga
+from flota.combustible.application.importacion import ImportarCargas
+from flota.combustible.application.puertos import LectorCargas
+from flota.reportes.application.casos_de_uso import GenerarReporteConsumo
+from flota.shared.domain.errores import Duplicado, ReglaNegocioViolada
+from flota.viajes.application.casos_de_uso import DatosInicioViaje, FinalizarViaje, IniciarViaje
 from tests.fakes import UnidadDeTrabajoFake
 
 SALIDA = datetime(2026, 10, 1, 8, 0)

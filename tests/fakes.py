@@ -5,16 +5,16 @@ from __future__ import annotations
 import copy
 from uuid import UUID
 
-from flota.application.ports import UnidadDeTrabajo
-from flota.domain.entities import EstadoViaje
-from flota.domain.repositories import (
+from flota.catalogo.domain.repositorios import (
     RepositorioCamiones,
-    RepositorioCargas,
     RepositorioChoferes,
     RepositorioClientes,
     RepositorioProductos,
-    RepositorioViajes,
 )
+from flota.combustible.domain.repositorios import RepositorioCargas
+from flota.shared.application.unidad_de_trabajo import UnidadDeTrabajoBase
+from flota.viajes.domain.entidades import EstadoViaje
+from flota.viajes.domain.repositorios import RepositorioViajes
 
 
 class _EnMemoria:
@@ -100,7 +100,7 @@ class CargasFake(_EnMemoria, RepositorioCargas):
         return bool(self._filtrar(igual))
 
 
-class UnidadDeTrabajoFake(UnidadDeTrabajo):
+class UnidadDeTrabajoFake(UnidadDeTrabajoBase):
     def __init__(self) -> None:
         self.camiones = CamionesFake()
         self.choferes = ChoferesFake()

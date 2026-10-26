@@ -5,11 +5,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
-from flota.infrastructure.db.models import Base
-from flota.infrastructure.db.session import crear_session_factory
-from flota.infrastructure.db.unidad_de_trabajo import UnidadDeTrabajoSql
-from flota.presentation.api.app import create_app
-from flota.presentation.api.dependencias import obtener_uow
+from flota.dependencias import obtener_uow
+from flota.main import create_app
+from flota.modelos import Base
+from flota.shared.infrastructure.db import crear_session_factory
+from flota.unidad_de_trabajo import UnidadDeTrabajoSql
 
 
 @pytest.fixture
