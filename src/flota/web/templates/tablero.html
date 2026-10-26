@@ -38,20 +38,18 @@
   </section>
 
   <section class="tarjeta">
-    <h2>⚠ Últimas alertas de consumo</h2>
-    <p style="margin-top:0;color:var(--texto-suave);font-size:.85rem">Viajes que superaron en más de {{ umbral | numero(0) }} % el consumo de referencia.</p>
+    <h2>⚠ Alertas abiertas: {{ alertas_abiertas }}</h2>
+    <p class="ayuda">Desvíos de más del {{ umbral | numero(0) }} % contra la referencia de la ruta, cargas que superan el tanque, etc. <a href="/alertas">Ver y resolver</a></p>
     <div class="tabla-contenedor">
       <table>
-        <thead><tr><th>Salida</th><th>Patente</th><th>Chofer</th><th class="num">L/100km</th><th class="num">Desvío</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th></tr></thead>
         <tbody>
-          {% for f in alertas %}
+          {% for a in alertas %}
           <tr class="fila-alerta">
-            <td>{{ f.fecha_salida | fecha(false) }}</td><td><strong>{{ f.patente }}</strong></td>
-            <td>{{ f.chofer }}</td><td class="num">{{ f.consumo_l100km | numero(1) }}</td>
-            <td class="num">{{ m.desvio(f.desvio_pct) }}</td>
+            <td>{{ a.creada_en | fecha(false) }}</td><td><strong>{{ a.nombre_tipo }}</strong></td><td>{{ a.descripcion }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="5" class="vacio">Sin alertas. ✔</td></tr>
+          <tr><td colspan="3" class="vacio">Sin alertas. ✔</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -29,6 +29,8 @@ MENU = [
     ("/viajes", "Viajes"),
     ("/rutas", "Rutas"),
     ("/combustible", "Combustible"),
+    ("/alertas", "Alertas"),
+    ("/monedas", "Tipo de cambio"),
     ("/reportes", "Reportes"),
     ("/catalogo", "Flota y clientes"),
 ]

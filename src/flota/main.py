@@ -9,10 +9,14 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from flota import marca
+from flota.alertas.presentation import api as alertas_api
+from flota.alertas.presentation import web as alertas_web
 from flota.catalogo.presentation import api as catalogo_api
 from flota.catalogo.presentation import web as catalogo_web
 from flota.combustible.presentation import api as combustible_api
 from flota.combustible.presentation import web as combustible_web
+from flota.monedas.presentation import api as monedas_api
+from flota.monedas.presentation import web as monedas_web
 from flota.reportes.presentation import api as reportes_api
 from flota.reportes.presentation import web as reportes_web
 from flota.shared.domain.errores import (
@@ -26,8 +30,8 @@ from flota.viajes.presentation import api as viajes_api
 from flota.viajes.presentation import web as viajes_web
 from flota.web.plantillas import CARPETA_WEB
 
-ROUTERS_API = (catalogo_api, viajes_api, combustible_api, reportes_api)
-ROUTERS_WEB = (reportes_web, viajes_web, combustible_web, catalogo_web)
+ROUTERS_API = (catalogo_api, viajes_api, combustible_api, alertas_api, monedas_api, reportes_api)
+ROUTERS_WEB = (reportes_web, viajes_web, combustible_web, alertas_web, monedas_web, catalogo_web)
 
 # Traducción de errores del negocio a códigos HTTP.
 _CODIGOS_HTTP: dict[type[ErrorDominio], int] = {

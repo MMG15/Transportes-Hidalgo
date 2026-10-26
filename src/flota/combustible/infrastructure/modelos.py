@@ -21,8 +21,16 @@ class CargaCombustibleModel(ConAuditoria, Base):
     viaje_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("viajes.id"), index=True)
     fecha: Mapped[datetime]
     litros: Mapped[Decimal] = mapped_column(Numeric(10, 2))
-    precio_litro: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     odometro_km: Mapped[Decimal | None] = mapped_column(Numeric(10, 1))
     estacion: Mapped[str | None] = mapped_column(String(120))
     origen: Mapped[str] = mapped_column(String(20))
     referencia_externa: Mapped[str | None] = mapped_column(String(80), unique=True)
+    # Importe (RF-40): el objeto de valor ImporteGasto se guarda "aplanado" en estas columnas.
+    monto_original: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    moneda: Mapped[str | None] = mapped_column(String(3))
+    cotizacion: Mapped[Decimal | None] = mapped_column(Numeric(14, 6))
+    monto_ars: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    tipo_cambio_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tipos_cambio.id", name="fk_cargas_tipo_cambio"), index=True
+    )
+    revisar_cotizacion: Mapped[bool] = mapped_column(default=False)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import fields
 from datetime import datetime
 from uuid import UUID
 
@@ -12,6 +13,7 @@ from flota.combustible.domain.entidades import CargaCombustible
 from flota.combustible.domain.repositorios import RepositorioCargas
 from flota.combustible.infrastructure.modelos import CargaCombustibleModel
 from flota.shared.infrastructure.db import RepositorioSql
+from flota.shared.infrastructure.importes import importe_a_columnas, importe_desde_modelo
 
 
 class RepositorioCargasSql(
@@ -22,6 +24,17 @@ class RepositorioCargasSql(
         CargaCombustibleModel,
         CargaCombustibleModel.fecha.desc(),
     )
+
+    # El importe es un objeto de valor que ocupa varias columnas.
+    def _a_entidad(self, modelo: CargaCombustibleModel) -> CargaCombustible:
+        datos = {
+            f.name: getattr(modelo, f.name) for f in fields(CargaCombustible) if f.name != "importe"
+        }
+        return CargaCombustible(**datos, importe=importe_desde_modelo(modelo))
+
+    def _a_modelo(self, carga: CargaCombustible) -> CargaCombustibleModel:
+        datos = {f.name: getattr(carga, f.name) for f in fields(carga) if f.name != "importe"}
+        return CargaCombustibleModel(**datos, **importe_a_columnas(carga.importe))
 
     def listar_por_viajes(self, viaje_ids: Sequence[UUID]) -> list[CargaCombustible]:
         if not viaje_ids:

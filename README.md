@@ -4,7 +4,7 @@
 
 Control de viajes de camiones (distribución de cal y otros productos) y del **consumo de combustible por viaje**.
 
-- **Panel web** en http://127.0.0.1:8000 — tablero, viajes, rutas, combustible, reportes y catálogo.
+- **Panel web** en http://127.0.0.1:8000 — tablero, viajes, rutas, combustible, alertas, tipo de cambio, reportes y catálogo.
 - **API REST** en http://127.0.0.1:8000/docs
 - **Reportes Excel** con la identidad de la empresa.
 - **Documento de requisitos v1.1** (referencia funcional del sistema): [`docs/requisitos_v1.1.md`](docs/requisitos_v1.1.md) · [versión Word](docs/word/Requisitos_Sistema_Trazabilidad_Hidalgo_v1.1.docx) · análisis de brechas código ↔ requisitos en [`docs/brechas-requisitos-v1.1.md`](docs/brechas-requisitos-v1.1.md).
@@ -31,6 +31,8 @@ src/flota/
 ├── catalogo/      MOD-01  Camiones, choferes, clientes y productos
 ├── viajes/        MOD-02  Rutas, viajes y tramos cargado / vacío
 ├── combustible/   MOD-03  Cargas, importación de tarjeta y cálculo de consumo por tramo
+├── alertas/       MOD-05  Alertas con estado y resolución (generadas por eventos)
+├── monedas/       MOD-10  Tipo de cambio CLP → ARS y conversión de gastos
 ├── reportes/      MOD-12  Tablero, reportes filtrables y Excel
 ├── web/           Plantillas Jinja2 y estilos del panel
 ├── marca/         Colores y logos de Transportes Hidalgo
@@ -62,6 +64,7 @@ uv run flota servidor           # panel en http://127.0.0.1:8000 · API en /docs
 | `uv run flota importar-carpeta entrada --origen tarjeta` | Importa todo lo de una carpeta y lo mueve a `procesados/` o `errores/` |
 | `uv run flota exportar --desde 2026-10-01 --hasta 2026-10-31` | Genera el reporte de consumo en `reportes/` |
 | `uv run flota plantilla` | Genera la planilla modelo para importar |
+| `uv run flota recalcular-alertas` | Evalúa las alertas de consumo de los viajes cerrados |
 | `uv run pytest` | Corre los tests |
 
 ### Columnas reconocidas al importar

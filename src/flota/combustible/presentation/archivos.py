@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from decimal import Decimal
 from pathlib import Path
 from typing import BinaryIO
 
@@ -20,7 +19,6 @@ def importar_subida(
     contenido: BinaryIO,
     nombre_archivo: str,
     origen: OrigenDato,
-    tolerancia_tanque_pct: Decimal,
 ) -> ResultadoImportacion:
     """Lanza ValueError si el formato no es soportado."""
     extension = Path(nombre_archivo).suffix.lower()
@@ -30,4 +28,4 @@ def importar_subida(
         ruta = Path(carpeta) / f"importacion{extension}"
         with ruta.open("wb") as destino:
             shutil.copyfileobj(contenido, destino)
-        return ImportarCargas(uow, lector, origen, tolerancia_tanque_pct).ejecutar(ruta)
+        return ImportarCargas(uow, lector, origen).ejecutar(ruta)

@@ -21,6 +21,8 @@ ALIAS: dict[str, set[str]] = {
     "precio_litro": {"precio_litro", "precio", "precio_unitario", "precio_por_litro", "pu"},
     "odometro_km": {"odometro_km", "odometro", "km", "kilometraje", "kms"},
     "estacion": {"estacion", "estacion_servicio", "establecimiento", "lugar", "comercio"},
+    "importe": {"importe", "monto", "total", "importe_total", "monto_total"},
+    "moneda": {"moneda", "divisa"},
     "referencia": {
         "referencia",
         "ticket",
@@ -33,6 +35,7 @@ ALIAS: dict[str, set[str]] = {
     },
 }
 OBLIGATORIAS = ("fecha", "patente", "litros")
+MONEDAS = {"ARS", "CLP"}
 _CANONICA = {alias: canonica for canonica, aliases in ALIAS.items() for alias in aliases}
 
 _FORMATOS_FECHA = (
@@ -141,6 +144,9 @@ def procesar_filas(
             litros = a_decimal(valor("litros"))
             if fecha is None or patente is None or litros is None:
                 raise ValueError("fecha, patente y litros son obligatorios")
+            moneda = (_texto(valor("moneda")) or "ARS").upper()
+            if moneda not in MONEDAS:
+                raise ValueError(f"moneda '{moneda}' no soportada (use ARS o CLP)")
             yield FilaCarga(
                 numero_fila=numero,
                 fecha=fecha,
@@ -150,6 +156,8 @@ def procesar_filas(
                 odometro_km=a_decimal(valor("odometro_km")),
                 estacion=_texto(valor("estacion")),
                 referencia=_texto(valor("referencia")),
+                importe=a_decimal(valor("importe")),
+                moneda=moneda,
             )
         except ValueError as error:
             yield ErrorLectura(numero, str(error))

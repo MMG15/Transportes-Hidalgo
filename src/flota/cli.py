@@ -16,6 +16,7 @@ from typing import Annotated
 import typer
 
 from flota import bootstrap
+from flota.alertas.application.casos_de_uso import EvaluarAlertasViaje
 from flota.catalogo.application.casos_de_uso import (
     DatosCamion,
     DatosChofer,
@@ -30,18 +31,21 @@ from flota.combustible.application.casos_de_uso import DatosCarga, RegistrarCarg
 from flota.combustible.application.importacion import ImportarCargas
 from flota.combustible.domain.entidades import OrigenDato
 from flota.combustible.infrastructure.importacion import EXTENSIONES_SOPORTADAS, lector_para_archivo
+from flota.monedas.application.casos_de_uso import CargarCotizacion
 from flota.reportes.application.casos_de_uso import ExportarReporteConsumo, GenerarReporteConsumo
 from flota.reportes.infrastructure.excel import crear_plantilla_importacion
+from flota.shared.domain.dinero import Moneda
 from flota.shared.infrastructure.config import get_settings
 from flota.viajes.application.casos_de_uso import (
     CambiarEstadoCarga,
+    ConsultasViajes,
     DatosInicioViaje,
     DatosRuta,
     FinalizarViaje,
     IniciarViaje,
     RegistrarRuta,
 )
-from flota.viajes.domain.entidades import EstadoCarga, Pais
+from flota.viajes.domain.entidades import EstadoCarga, EstadoViaje, Pais
 
 app = typer.Typer(help="Gestión de flota y consumo de combustible.", no_args_is_help=True)
 
@@ -113,10 +117,7 @@ def importar_carpeta(
 def _importar_archivo(archivo: Path, origen: OrigenDato):
     if not archivo.exists():
         raise typer.BadParameter(f"No existe el archivo {archivo}")
-    config = get_settings()
-    caso_uso = ImportarCargas(
-        bootstrap.crear_uow(), lector_para_archivo(archivo), origen, config.tolerancia_tanque_pct
-    )
+    caso_uso = ImportarCargas(bootstrap.crear_uow(), lector_para_archivo(archivo), origen)
     return caso_uso.ejecutar(archivo)
 
 
@@ -138,6 +139,23 @@ def exportar(
     reporte = exportar_uc.ejecutar(inicio, fin, salida)
     alertas = sum(1 for f in reporte.filas if f.alerta)
     typer.echo(f"Reporte generado: {salida} ({len(reporte.filas)} viajes, {alertas} con alerta)")
+
+
+@app.command()
+def recalcular_alertas(dias: int = 90) -> None:
+    """Evalúa las alertas de consumo de los viajes cerrados de los últimos días (RF-16).
+
+    Útil después de migrar datos o de cambiar referencias de rutas.
+    """
+    config = get_settings()
+    fin = datetime.now() + timedelta(days=1)
+    viajes = ConsultasViajes(bootstrap.crear_uow()).listar(fin - timedelta(days=dias + 1), fin)
+    generadas = 0
+    for viaje in viajes:
+        if viaje.estado == EstadoViaje.FINALIZADO:
+            evaluar = EvaluarAlertasViaje(bootstrap.crear_uow(), config.umbral_desvio_pct)
+            generadas += len(evaluar.ejecutar(viaje.id))
+    typer.echo(f"{len(viajes)} viajes revisados, {generadas} alertas nuevas.")
 
 
 @app.command()
@@ -188,9 +206,14 @@ def datos_demo() -> None:
         DatosRuta("Planta Albardón (SJ)", "Los Andes (CL)", Pais.CL, Decimal("390"))
     )
 
-    config = get_settings()
-    registrar_carga = RegistrarCargaCombustible(uow, config.tolerancia_tanque_pct)
+    registrar_carga = RegistrarCargaCombustible(uow)
     hoy = datetime.now().replace(hour=6, minute=0, second=0, microsecond=0)
+    # Cotización CLP -> ARS de los últimos días (con un hueco: esos gastos quedan "a revisar").
+    for dias in range(25, -1, -1):
+        if dias not in (10, 11):
+            CargarCotizacion(uow).ejecutar(
+                (hoy - timedelta(days=dias)).date(), Decimal("1.30") + Decimal(dias) / 1000
+            )
     km = {scania.id: Decimal("125000"), mercedes.id: Decimal("98000")}
     # (camión, chofer, ruta, días atrás, km por tramo, litros ida cargado, litros regreso vacío)
     viajes = [
@@ -218,15 +241,18 @@ def datos_demo() -> None:
                 cantidad=Decimal("28"),
             )
         )
+        en_chile = ruta.pais == Pais.CL
         for horas, litros in ((2, litros_ida), (8, litros_vuelta)):
+            vuelta_en_chile = en_chile and horas == 8  # la vuelta desde Chile se carga en CLP
             registrar_carga.ejecutar(
                 DatosCarga(
                     camion.id,
                     salida + timedelta(hours=horas),
                     Decimal(litros),
-                    Decimal("1450"),
-                    estacion="YPF Ruta 40" if horas == 2 else "Copec Los Andes",
+                    Decimal("1250") if vuelta_en_chile else Decimal("1450"),
+                    estacion="Copec Los Andes" if vuelta_en_chile else "YPF Ruta 40",
                     referencia_externa=f"DEMO-{viaje.id.hex[:8]}-{horas}",
+                    moneda=Moneda.CLP if vuelta_en_chile else Moneda.ARS,
                 )
             )
         CambiarEstadoCarga(uow).ejecutar(

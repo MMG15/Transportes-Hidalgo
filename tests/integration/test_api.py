@@ -70,7 +70,8 @@ def test_flujo_completo(cliente):
         },
     )
     assert carga["viaje_id"] == viaje["id"]  # asignada automáticamente
-    assert carga["importe"] == 145000.0
+    assert carga["costo_ars"] == 145000.0
+    assert carga["importe"]["original"] == {"monto": 145000.0, "moneda": "ARS"}
 
     # Duplicado -> 409
     repetida = cliente.post(
@@ -120,6 +121,11 @@ def test_flujo_completo(cliente):
     assert ida["alerta"] is False  # 50 contra 45: +11,1 %, dentro del umbral del 15 %
     assert (vuelta["consumo_l100km"], vuelta["alerta"]) == (35.0, True)  # 35 contra 30: +16,7 %
     assert consumo["alerta"] is True
+
+    # El bus de eventos generó la alerta del tramo vacío al finalizar el viaje (RF-16)
+    (alerta,) = cliente.get(f"{API}/alertas", params={"estado": "abierta"}).json()
+    assert alerta["tipo"] == "desvio_consumo" and alerta["viaje_id"] == viaje["id"]
+    assert alerta["valor_detectado"] == 35.0 and alerta["valor_referencia"] == 30.0
 
 
 def test_reporte_y_excel(cliente):

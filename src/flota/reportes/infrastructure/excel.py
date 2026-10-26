@@ -36,6 +36,8 @@ COLUMNAS_PLANTILLA = [
     "odometro_km",
     "estacion",
     "referencia",
+    "importe",
+    "moneda",
 ]
 
 type Columnas = list[tuple[str, int, str | None]]  # (título, ancho, formato numérico)
@@ -230,6 +232,8 @@ def crear_plantilla_importacion(destino: Path | BinaryIO) -> None:
     hoja.title = "Cargas"
     columnas: Columnas = [(c, 16, None) for c in COLUMNAS_PLANTILLA]
     _escribir_encabezado(hoja, columnas, 1)
-    hoja.append(["21/10/2026 08:30", "AB123CD", 350.5, 1450.0, 125400, "YPF Ruta 5", "T-0001"])
+    hoja.append(
+        ["21/10/2026 08:30", "AB123CD", 350.5, 1450.0, 125400, "YPF Ruta 40", "T-0001", None, "ARS"]
+    )
     _aplicar_formatos(hoja, columnas, 1)
     libro.save(destino)

@@ -16,7 +16,8 @@ from flota.combustible.application.casos_de_uso import (
 )
 from flota.combustible.domain.entidades import OrigenDato
 from flota.combustible.presentation.archivos import importar_subida
-from flota.dependencias import Config, UoW
+from flota.dependencias import UoW
+from flota.shared.domain.dinero import Moneda
 from flota.web.plantillas import (
     FechaHora,
     Id,
@@ -53,11 +54,12 @@ def combustible(request: Request, uow: UoW):
 @router.post("/combustible")
 def registrar_carga(
     uow: UoW,
-    config: Config,
     camion_id: Id,
     fecha: FechaHora,
     litros: Numero,
+    monto: TextoOpcional = None,
     precio_litro: TextoOpcional = None,
+    moneda: Annotated[Moneda, Form()] = Moneda.ARS,
     odometro_km: TextoOpcional = None,
     estacion: TextoOpcional = None,
     referencia_externa: TextoOpcional = None,
@@ -66,13 +68,15 @@ def registrar_carga(
         camion_id=camion_id,
         fecha=fecha,
         litros=litros,
+        monto=decimal_opcional(monto),
         precio_litro=decimal_opcional(precio_litro),
+        moneda=moneda,
         odometro_km=decimal_opcional(odometro_km),
         estacion=estacion,
         origen=OrigenDato.MANUAL,
         referencia_externa=referencia_externa,
     )
-    registrar = RegistrarCargaCombustible(uow, config.tolerancia_tanque_pct)
+    registrar = RegistrarCargaCombustible(uow)
     return ejecutar("/combustible", lambda: registrar.ejecutar(datos), "Carga registrada.")
 
 
@@ -80,14 +84,11 @@ def registrar_carga(
 def importar(
     request: Request,
     uow: UoW,
-    config: Config,
     archivo: UploadFile,
     origen: Annotated[OrigenDato, Form()] = OrigenDato.EXCEL,
 ):
     try:
-        resultado = importar_subida(
-            uow, archivo.file, archivo.filename or "", origen, config.tolerancia_tanque_pct
-        )
+        resultado = importar_subida(uow, archivo.file, archivo.filename or "", origen)
     except ValueError as error:
         return volver("/combustible", error=str(error))
     return _pagina_combustible(request, uow, resultado=resultado, nombre_archivo=archivo.filename)

@@ -19,6 +19,8 @@ class FilaCarga:
     odometro_km: Decimal | None = None
     estacion: str | None = None
     referencia: str | None = None
+    importe: Decimal | None = None  # total del ticket (si no viene, se usa precio x litros)
+    moneda: str = "ARS"
 
 
 @dataclass(frozen=True)

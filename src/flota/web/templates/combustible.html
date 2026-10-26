@@ -41,7 +41,10 @@
         <select id="camion_id" name="camion_id" required>{% for c in camiones %}<option value="{{ c.id }}">{{ c.patente }}</option>{% endfor %}</select></div>
       <div class="campo"><label for="fecha">Fecha y hora</label><input id="fecha" name="fecha" type="datetime-local" value="{{ ahora | fecha_input }}" required></div>
       <div class="campo"><label for="litros">Litros</label><input id="litros" name="litros" type="number" step="0.01" min="0.01" required></div>
-      <div class="campo"><label for="precio_litro">Precio por litro ($)</label><input id="precio_litro" name="precio_litro" type="number" step="0.01" min="0"></div>
+      <div class="campo"><label for="monto">Importe total</label><input id="monto" name="monto" type="number" step="0.01" min="0"></div>
+      <div class="campo"><label for="precio_litro">o precio por litro</label><input id="precio_litro" name="precio_litro" type="number" step="0.01" min="0"></div>
+      <div class="campo"><label for="moneda">Moneda</label>
+        <select id="moneda" name="moneda"><option value="ARS">ARS (pesos argentinos)</option><option value="CLP">CLP (pesos chilenos)</option></select></div>
       <div class="campo"><label for="odometro_km">Odómetro (km)</label><input id="odometro_km" name="odometro_km" type="number" step="0.1" min="0"></div>
       <div class="campo"><label for="estacion">Estación</label><input id="estacion" name="estacion"></div>
       <div class="campo"><label for="referencia_externa">Nro. de ticket</label><input id="referencia_externa" name="referencia_externa"></div>
@@ -56,7 +59,7 @@
   <div class="tabla-contenedor">
     <table>
       <thead>
-        <tr><th>Fecha</th><th>Patente</th><th class="num">Litros</th><th class="num">Precio/L</th><th class="num">Importe</th><th>Estación</th><th>Ticket</th><th>Origen</th><th>Viaje</th></tr>
+        <tr><th>Fecha</th><th>Patente</th><th class="num">Litros</th><th class="num">Precio/L</th><th class="num">Importe original</th><th class="num">En ARS</th><th>Estación</th><th>Ticket</th><th>Origen</th><th>Viaje</th></tr>
       </thead>
       <tbody>
         {% for c in cargas %}
@@ -64,15 +67,16 @@
           <td>{{ c.fecha | fecha }}</td>
           <td><strong>{{ patentes.get(c.camion_id, "—") }}</strong></td>
           <td class="num">{{ c.litros | numero(2) }}</td>
-          <td class="num">{{ c.precio_litro | moneda }}</td>
-          <td class="num">{{ c.importe | moneda }}</td>
+          <td class="num">{{ c.precio_litro | numero(2) }}</td>
+          <td class="num">{% if c.importe %}{{ c.importe.original.moneda }} {{ c.importe.original.monto | numero(2) }}{% else %}—{% endif %}</td>
+          <td class="num">{{ c.costo_ars | moneda }}{% if c.importe and c.importe.revisar_cotizacion %} <span class="etiqueta etiqueta--alerta" title="Se usó la última cotización disponible, no la del día">revisar</span>{% endif %}</td>
           <td>{{ c.estacion or "—" }}</td>
           <td>{{ c.referencia_externa or "—" }}</td>
           <td><span class="etiqueta etiqueta--origen">{{ c.origen }}</span></td>
           <td>{% if c.viaje_id %}✔ Asignada{% else %}<span style="color:var(--texto-suave)">Sin viaje</span>{% endif %}</td>
         </tr>
         {% else %}
-        <tr><td colspan="9" class="vacio">Todavía no hay cargas registradas.</td></tr>
+        <tr><td colspan="10" class="vacio">Todavía no hay cargas registradas.</td></tr>
         {% endfor %}
       </tbody>
     </table>

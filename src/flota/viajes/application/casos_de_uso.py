@@ -11,6 +11,7 @@ from flota.shared.application.comun import obtener_o_fallar
 from flota.shared.domain.errores import Duplicado, ReglaNegocioViolada
 from flota.viajes.application.puertos import UoWViajes
 from flota.viajes.domain.entidades import EstadoCarga, OrigenKm, Pais, Ruta, TramoViaje, Viaje
+from flota.viajes.domain.eventos import TramoCerrado, ViajeFinalizado
 
 
 # ---------- Rutas ----------
@@ -137,6 +138,7 @@ class CambiarEstadoCarga:
             camion.registrar_km(km)
             uow.camiones.guardar(camion)
             uow.viajes.guardar(viaje)
+            uow.registrar_evento(TramoCerrado(viaje.id))
             uow.commit()
         return tramo
 
@@ -155,6 +157,7 @@ class FinalizarViaje:
             camion.registrar_km(km_llegada)
             uow.camiones.guardar(camion)
             uow.viajes.guardar(viaje)
+            uow.registrar_evento(ViajeFinalizado(viaje.id))  # lo escucha el módulo de alertas
             uow.commit()
         return viaje
 

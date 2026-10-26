@@ -97,3 +97,9 @@
   </table>
 </div>
 {% endmacro %}
+
+{% macro estado_alerta(a) -%}
+  {%- set nombres = {"abierta": "Abierta", "en_analisis": "En análisis", "justificada": "Justificada", "confirmada": "Desvío confirmado"} -%}
+  <span class="etiqueta etiqueta--{{ a.estado }}">{{ nombres[a.estado] }}</span>
+  {%- if a.escalada %} <span class="etiqueta etiqueta--alerta" title="Escalada a Gerencia">↑ Gerencia</span>{% endif %}
+{%- endmacro %}

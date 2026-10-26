@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from flota.combustible.domain.consumo import FuenteReferencia
 from flota.combustible.domain.entidades import OrigenDato
+from flota.shared.domain.dinero import Moneda
 from flota.shared.presentation.esquemas import Esquema, Numero
 from flota.viajes.domain.entidades import EstadoCarga
 
@@ -18,11 +19,27 @@ class CargaCrear(BaseModel):
     camion_id: UUID
     fecha: datetime
     litros: Decimal = Field(gt=0, examples=[350])
-    precio_litro: Decimal | None = Field(default=None, ge=0, examples=[1450])
+    monto: Decimal | None = Field(default=None, ge=0, description="Importe total del ticket")
+    precio_litro: Decimal | None = Field(
+        default=None, ge=0, examples=[1450], description="Se usa si no se informa el monto"
+    )
+    moneda: Moneda = Moneda.ARS
     odometro_km: Decimal | None = Field(default=None, ge=0)
     estacion: str | None = None
     referencia_externa: str | None = Field(default=None, examples=["T-000123"])
     viaje_id: UUID | None = None
+
+
+class DineroLeer(Esquema):
+    monto: Numero
+    moneda: Moneda
+
+
+class ImporteLeer(Esquema):
+    original: DineroLeer
+    cotizacion: Numero
+    monto_ars: Numero
+    revisar_cotizacion: bool
 
 
 class CargaLeer(Esquema):
@@ -31,8 +48,9 @@ class CargaLeer(Esquema):
     viaje_id: UUID | None
     fecha: datetime
     litros: Numero
+    importe: ImporteLeer | None
     precio_litro: Numero | None
-    importe: Numero | None
+    costo_ars: Numero | None
     odometro_km: Numero | None
     estacion: str | None
     origen: OrigenDato

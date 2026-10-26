@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
 from pathlib import Path
 
 from flota.catalogo.domain.entidades import normalizar_patente
@@ -10,6 +9,7 @@ from flota.combustible.application.casos_de_uso import DatosCarga, RegistrarCarg
 from flota.combustible.application.dto import ErrorLectura, ResultadoImportacion
 from flota.combustible.application.puertos import LectorCargas, UoWCombustible
 from flota.combustible.domain.entidades import OrigenDato
+from flota.shared.domain.dinero import Moneda
 from flota.shared.domain.errores import Duplicado, ErrorDominio
 
 
@@ -22,12 +22,11 @@ class ImportarCargas:
         uow: UoWCombustible,
         lector: LectorCargas,
         origen: OrigenDato = OrigenDato.EXCEL,
-        tolerancia_tanque_pct: Decimal = Decimal("5"),
     ) -> None:
         self._uow = uow
         self._lector = lector
         self._origen = origen
-        self._registrar = RegistrarCargaCombustible(uow, tolerancia_tanque_pct)
+        self._registrar = RegistrarCargaCombustible(uow)
 
     def ejecutar(self, ruta: Path) -> ResultadoImportacion:
         resultado = ResultadoImportacion()
@@ -61,6 +60,8 @@ class ImportarCargas:
                         estacion=item.estacion,
                         origen=self._origen,
                         referencia_externa=item.referencia,
+                        monto=item.importe,
+                        moneda=Moneda(item.moneda),
                     )
                 )
                 resultado.importadas += 1

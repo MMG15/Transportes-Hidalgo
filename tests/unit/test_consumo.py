@@ -15,6 +15,7 @@ from flota.combustible.domain.consumo import (
     promedio_historico,
 )
 from flota.combustible.domain.entidades import CargaCombustible
+from flota.shared.domain.dinero import ImporteGasto
 from flota.shared.domain.errores import ReglaNegocioViolada
 from flota.viajes.domain.entidades import EstadoCarga, Ruta, Viaje
 from tests.escenarios import SALIDA
@@ -59,7 +60,7 @@ def carga(viaje: Viaje, horas: int, litros: str, precio: str | None = None) -> C
         camion_id=viaje.camion_id,
         fecha=SALIDA + timedelta(hours=horas),
         litros=Decimal(litros),
-        precio_litro=Decimal(precio) if precio else None,
+        importe=ImporteGasto.en_pesos(Decimal(precio) * Decimal(litros)) if precio else None,
         viaje_id=viaje.id,
     )
 

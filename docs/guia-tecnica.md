@@ -52,6 +52,8 @@ Transportes-Hidalgo/
     ├── catalogo/         MOD-01 Camiones, choferes, clientes y productos
     ├── viajes/           MOD-02 Rutas, viajes y tramos (cargado / vacío)
     ├── combustible/      MOD-03 Cargas, importación de tarjeta y cálculo de consumo
+    ├── alertas/          MOD-05 Alertas con estado y resolución; reaccionan a eventos
+    ├── monedas/          MOD-10 Tipo de cambio CLP → ARS y conversión de gastos
     ├── reportes/         MOD-12 Tablero, reportes y Excel (sólo lectura)
     ├── web/              Plantillas, estilos y utilidades del panel
     ├── marca/            Colores y logos de la empresa
@@ -287,7 +289,56 @@ yield from procesar_filas(...)      # delega en otro generador
 
 Procesan fila por fila: poca memoria con archivos grandes y una fila mala no detiene el resto.
 
-### 3.11 Otras herramientas de la librería estándar
+### 3.11 Objetos de valor y métodos especiales (`__add__`, `__lt__`)
+
+En [shared/domain/dinero.py](../src/flota/shared/domain/dinero.py):
+
+```python
+@dataclass(frozen=True)
+class Dinero:
+    monto: Decimal
+    moneda: Moneda = Moneda.ARS
+
+    def __add__(self, otro: Dinero) -> Dinero:
+        self._misma_moneda(otro)              # pesos argentinos + chilenos -> error
+        return Dinero(self.monto + otro.monto, self.moneda)
+```
+
+- Un **objeto de valor** no tiene identidad (no tiene `id`): dos `Dinero(100, ARS)` son iguales e
+  intercambiables. Es **inmutable** (`frozen=True`): las operaciones devuelven un objeto nuevo.
+- Los métodos con doble guion bajo son **métodos especiales**: Python los llama solo.
+  `a + b` ejecuta `a.__add__(b)`, `a * 2` ejecuta `__mul__`, `a < b` ejecuta `__lt__`.
+  Así `Dinero` se usa como un número, pero **no deja mezclar monedas**.
+- En una dataclass congelada no se puede hacer `self.x = ...` ni siquiera en `__post_init__`;
+  para normalizar un campo se usa `object.__setattr__(self, "moneda", Moneda(self.moneda))`.
+- `ImporteGasto` agrupa lo que todo gasto guarda (RF-40): monto original, moneda, cotización
+  aplicada y monto en ARS. En la base ocupa varias columnas: los repositorios lo "aplanan" y lo
+  rearman con [shared/infrastructure/importes.py](../src/flota/shared/infrastructure/importes.py).
+
+### 3.12 Funciones anidadas y *closures*
+
+En [alertas/application/manejadores.py](../src/flota/alertas/application/manejadores.py):
+
+```python
+def suscribir(bus, crear_uow, umbral_desvio_pct, tolerancia_tanque_pct):
+    def evaluar_viaje(evento):                       # función definida DENTRO de otra
+        EvaluarAlertasViaje(crear_uow(), umbral_desvio_pct).ejecutar(evento.viaje_id)
+    bus.suscribir(ViajeFinalizado, evaluar_viaje)
+```
+
+`evaluar_viaje` "recuerda" las variables de la función que la creó (`crear_uow`, `umbral_desvio_pct`)
+aunque se ejecute mucho después: eso es un **closure**. Permite registrar manejadores que ya traen
+su configuración, sin variables globales.
+
+### 3.13 `logging` y alias de tipos
+
+- `log = logging.getLogger(__name__)` + `log.exception(...)`
+  ([shared/application/eventos.py](../src/flota/shared/application/eventos.py)): registra el error
+  con su traza completa sin cortar el programa.
+- `type Manejador = Callable[[Evento], None]`: **alias de tipo** (Python 3.12+); da nombre a un
+  tipo largo. `Callable[[Evento], None]` = "una función que recibe un Evento y no devuelve nada".
+
+### 3.14 Otras herramientas de la librería estándar
 
 | Recurso | Ejemplo / dónde | Para qué |
 |---|---|---|
@@ -457,6 +508,25 @@ testea sin base de datos y se puede cambiar de tecnología tocando sólo `infras
 | **Raíz de composición** | `bootstrap.py` | Único lugar donde se eligen implementaciones concretas. |
 | **DTO** | `*/application/dto.py`, `Datos*` | Objetos simples para mover datos entre capas. |
 | **CQRS liviano** | `Consultas*` vs `Registrar*` | Las lecturas se separan de los cambios. |
+| **Objeto de valor** | `Dinero`, `ImporteGasto`, `Referencia` | Se define por su valor, no por un id; inmutable. |
+| **Evento de dominio** | `ViajeFinalizado`, `CargaRegistrada` | "Algo pasó"; quien lo publica no sabe quién lo escucha. |
+| **Observador / bus de eventos** | `BusEventos`, `alertas/application/manejadores.py` | Los módulos reaccionan a eventos de otros sin depender de ellos. |
+
+### Eventos: cómo un módulo reacciona a otro sin depender de él
+
+```
+viajes: FinalizarViaje ──registra──► ViajeFinalizado
+                                        │  (uow.commit() confirma y DESPUÉS publica)
+                                        ▼
+                                   BusEventos ──► alertas: EvaluarAlertasViaje (su propia transacción)
+```
+
+- El caso de uso **registra** el evento en la unidad de trabajo (`uow.registrar_evento(...)`).
+- `commit()` confirma la transacción y **recién después** publica los eventos: si algo falla antes
+  del commit, no se avisa nada que no ocurrió.
+- [bootstrap.py](../src/flota/bootstrap.py) arma el bus y suscribe los manejadores de cada módulo.
+- Si un manejador falla, el error se registra y la operación original igual queda guardada.
+- Así `viajes` y `combustible` no importan a `alertas` (que depende de ellos): no hay ciclos.
 
 ### Regla de negocio destacada: referencia de consumo (RF-11, RF-13, RF-16)
 
@@ -468,6 +538,13 @@ Para cada tramo, [consumo.py](../src/flota/combustible/domain/consumo.py) elige 
 
 Hay alerta si el consumo supera la referencia en más del umbral (15 %), **sólo** si la referencia
 es de la ruta: la del camión es una sola para cargado y vacío y daría falsas alarmas.
+
+### Regla de negocio destacada: conversión de moneda (RF-40, RF-41)
+
+[monedas/domain/entidades.py](../src/flota/monedas/domain/entidades.py), `convertir_a_pesos`:
+un gasto en CLP se convierte con la cotización de **su fecha**; si no hay, con la última anterior y
+el gasto queda marcado "a revisar". El gasto guarda la cotización aplicada: corregir la tabla de
+tipos de cambio después **no** cambia gastos ya registrados.
 
 ---
 
@@ -541,6 +618,8 @@ Casi todo requerimiento sigue el mismo camino, de adentro hacia afuera, **dentro
 1. **Dominio** (`<modulo>/domain/`): entidad, campo o regla + test unitario.
 2. **Aplicación** (`<modulo>/application/`): caso de uso (con su código CU/RF en el docstring) +
    test con fakes. Si necesita un repositorio nuevo, agregarlo al `UoW<Modulo>` del módulo.
+   Si otro módulo tiene que reaccionar, publicar un **evento** (`uow.registrar_evento(...)`) en
+   lugar de llamarlo directamente, y suscribir el manejador en `bootstrap.py`.
 3. **Infraestructura** (`<modulo>/infrastructure/`): tabla en `modelos.py`, repositorio SQL; registrarlo
    en [unidad_de_trabajo.py](../src/flota/unidad_de_trabajo.py) y el módulo de modelos en
    [modelos.py](../src/flota/modelos.py). Migración con Alembic (revisar el borrador; probar
@@ -617,6 +696,10 @@ Reglas:
 | **Endpoint** | Una URL + método HTTP de la API (`GET /api/v1/rutas`). |
 | **422 / 404 / 409 / 400** | Datos inválidos / no existe / duplicado / regla de negocio violada. |
 | **Entorno virtual** | Instalación aislada de Python y librerías para un proyecto. |
+| **Objeto de valor** | Objeto sin identidad, definido por sus valores e inmutable (`Dinero`). |
+| **Evento de dominio** | Aviso de algo que ocurrió en el negocio (`ViajeFinalizado`). |
+| **Bus de eventos** | Reparte cada evento a las funciones suscriptas. |
+| **Cotización** | Pesos argentinos por 1 peso chileno de un día (`TipoCambio`). |
 
 ---
 
@@ -630,8 +713,10 @@ Cada cambio del proyecto agrega una línea acá y, si introduce conceptos nuevos
 | 2026-10-21 | Versión Word de la guía y de cada sesión (`scripts/generar_word.py`). Conceptos: `match`/`case`, `subprocess`, `zipfile`, `re`, pandoc y filtros Lua. | 2, 3.11, 11 |
 | 2026-10-26 | Incorporación del [documento de requisitos v1.1](requisitos_v1.1.md) y del [análisis de brechas](brechas-requisitos-v1.1.md). Sin cambios de código. | 1 |
 | 2026-10-26 | **Sesión 4**: código reorganizado por módulo; rutas y tramos cargado / vacío; referencia por ruta e histórico. Conceptos: `Protocol`, `@classmethod` fábrica, agregados, `relationship` con cascada, migración de datos con `batch_alter_table`, Object Mother. Guía reescrita con las rutas nuevas. | Todas |
+| 2026-10-26 | **Sesión 5**: módulos `monedas` (tipo de cambio, `Dinero`, `ImporteGasto`) y `alertas` (entidad con ciclo de vida, CU-06); eventos de dominio y bus. Conceptos: objetos de valor, métodos especiales, closures, `logging`, alias de tipos. | 1, 3.11–3.13, 5, 9, 12 |
 
 Notas por sesión: [01 · Base del sistema](sesiones/01-base-del-sistema.md) ·
 [02 · Marca y panel web](sesiones/02-marca-y-panel-web.md) ·
 [03 · Entorno local y documentación](sesiones/03-entorno-local-y-documentacion.md) ·
-[04 · Módulos, rutas y tramos](sesiones/04-modulos-rutas-y-tramos.md)
+[04 · Módulos, rutas y tramos](sesiones/04-modulos-rutas-y-tramos.md) ·
+[05 · Moneda, alertas y eventos](sesiones/05-moneda-alertas-y-eventos.md)

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block titulo %}Alertas{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Alertas</h1>
+    <p>Cada anomalía tiene que quedar resuelta: justificada (tenía explicación) o desvío confirmado (se escala a Gerencia).</p>
+  </div>
+  <nav class="pestanas" aria-label="Filtro">
+    <a class="pestana{% if ver == 'abiertas' %} pestana--activa{% endif %}" href="/alertas">Abiertas</a>
+    <a class="pestana{% if ver != 'abiertas' %} pestana--activa{% endif %}" href="/alertas?ver=todas">Todas</a>
+  </nav>
+</div>
+
+<section class="tarjeta">
+  <div class="tabla-contenedor">
+    <table>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Camión</th><th>Detalle</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        {% for a in alertas %}
+        <tr{% if a.abierta %} class="fila-alerta"{% endif %}>
+          <td>{{ a.creada_en | fecha }}</td>
+          <td><strong>{{ a.nombre_tipo }}</strong></td>
+          <td>{{ patentes.get(a.camion_id, "—") }}</td>
+          <td>{{ a.descripcion }}{% if a.comentario %}<p class="ayuda">💬 {{ a.comentario }}</p>{% endif %}</td>
+          <td>{{ m.estado_alerta(a) }}</td>
+          <td>
+            {% if a.abierta %}
+            <details>
+              <summary>Resolver</summary>
+              <form class="formulario" method="post" action="/alertas/{{ a.id }}">
+                <div class="campo campo--ancho"><label>Comentario<textarea name="comentario" rows="2" required></textarea></label></div>
+                <div class="formulario__acciones">
+                  {% if a.estado == "abierta" %}<button class="boton boton--chico boton--acento" name="accion" value="en_analisis">En análisis</button>{% endif %}
+                  <button class="boton boton--chico" name="accion" value="justificar">Justificar</button>
+                  <button class="boton boton--chico boton--peligro" name="accion" value="confirmar">Confirmar desvío</button>
+                </div>
+              </form>
+            </details>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="vacio">{% if ver == "abiertas" %}No hay alertas abiertas. ✔{% else %}Todavía no hubo alertas.{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 from uuid import UUID
 
+from flota.alertas.domain.repositorios import RepositorioAlertas
 from flota.catalogo.domain.repositorios import (
     RepositorioCamiones,
     RepositorioChoferes,
@@ -12,7 +13,10 @@ from flota.catalogo.domain.repositorios import (
     RepositorioProductos,
 )
 from flota.combustible.domain.repositorios import RepositorioCargas
+from flota.monedas.domain.repositorios import RepositorioTiposCambio
+from flota.shared.application.eventos import BusEventos
 from flota.shared.application.unidad_de_trabajo import UnidadDeTrabajoBase
+from flota.shared.domain.dinero import Moneda
 from flota.viajes.domain.entidades import EstadoViaje
 from flota.viajes.domain.repositorios import RepositorioRutas, RepositorioViajes
 
@@ -112,8 +116,49 @@ class CargasFake(_EnMemoria, RepositorioCargas):
         return bool(self._filtrar(igual))
 
 
+class TiposCambioFake(_EnMemoria, RepositorioTiposCambio):
+    def __init__(self, cargas: CargasFake) -> None:
+        super().__init__()
+        self._cargas = cargas
+
+    def obtener_por_fecha(self, fecha, origen, destino=Moneda.ARS):
+        return self._primero(
+            lambda t: (t.fecha, t.moneda_origen, t.moneda_destino) == (fecha, origen, destino)
+        )
+
+    def vigente_al(self, fecha, origen, destino=Moneda.ARS):
+        candidatos = self._filtrar(
+            lambda t: t.fecha <= fecha and (t.moneda_origen, t.moneda_destino) == (origen, destino)
+        )
+        return max(candidatos, key=lambda t: t.fecha, default=None)
+
+    def contar_usos(self, tipo_cambio_id):
+        return len(
+            self._cargas._filtrar(
+                lambda c: c.importe is not None and c.importe.tipo_cambio_id == tipo_cambio_id
+            )
+        )
+
+
+class AlertasFake(_EnMemoria, RepositorioAlertas):
+    def buscar_por_origen(self, tipo, origen_tabla, origen_id):
+        return self._primero(
+            lambda a: (a.tipo, a.origen_tabla, a.origen_id) == (tipo, origen_tabla, origen_id)
+        )
+
+    def listar_por_estado(self, estados=None, limite=200):
+        lista = self._filtrar(lambda a: not estados or a.estado in estados)
+        return sorted(lista, key=lambda a: a.creada_en, reverse=True)[:limite]
+
+    def contar_abiertas(self):
+        return len(self._filtrar(lambda a: a.abierta))
+
+
 class UnidadDeTrabajoFake(UnidadDeTrabajoBase):
-    def __init__(self) -> None:
+    """Unidad de trabajo en memoria. Con `bus`, publica los eventos como la real."""
+
+    def __init__(self, bus: BusEventos | None = None) -> None:
+        super().__init__(bus)
         self.camiones = CamionesFake()
         self.choferes = ChoferesFake()
         self.clientes = ClientesFake()
@@ -121,10 +166,17 @@ class UnidadDeTrabajoFake(UnidadDeTrabajoBase):
         self.rutas = RutasFake()
         self.viajes = ViajesFake()
         self.cargas = CargasFake()
+        self.tipos_cambio = TiposCambioFake(self.cargas)
+        self.alertas = AlertasFake()
         self.commits = 0
+        self.eventos_publicados: list = []
 
-    def commit(self) -> None:
+    def registrar_evento(self, evento) -> None:
+        super().registrar_evento(evento)
+        self.eventos_publicados.append(evento)
+
+    def _confirmar(self) -> None:
         self.commits += 1
 
-    def rollback(self) -> None:
+    def _descartar(self) -> None:
         pass

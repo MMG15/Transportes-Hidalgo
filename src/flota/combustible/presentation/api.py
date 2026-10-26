@@ -25,8 +25,8 @@ router = APIRouter(tags=["Combustible"])
 
 
 @router.post("/cargas", response_model=CargaLeer, status_code=201)
-def registrar_carga(datos: CargaCrear, uow: UoW, config: Config):
-    carga = RegistrarCargaCombustible(uow, config.tolerancia_tanque_pct).ejecutar(
+def registrar_carga(datos: CargaCrear, uow: UoW):
+    carga = RegistrarCargaCombustible(uow).ejecutar(
         DatosCarga(**datos.model_dump(), origen=OrigenDato.MANUAL)
     )
     return CargaLeer.model_validate(carga)
@@ -48,14 +48,10 @@ def listar_cargas(
 
 
 @router.post("/cargas/importar", response_model=ResultadoImportacionLeer)
-def importar_cargas(
-    archivo: UploadFile, uow: UoW, config: Config, origen: OrigenDato = OrigenDato.EXCEL
-):
+def importar_cargas(archivo: UploadFile, uow: UoW, origen: OrigenDato = OrigenDato.EXCEL):
     """Sube un Excel (.xlsx) o CSV (tarjeta de combustible) con cargas."""
     try:
-        resultado = importar_subida(
-            uow, archivo.file, archivo.filename or "", origen, config.tolerancia_tanque_pct
-        )
+        resultado = importar_subida(uow, archivo.file, archivo.filename or "", origen)
     except ValueError as error:
         raise HTTPException(status_code=415, detail=str(error)) from error
     return ResultadoImportacionLeer.model_validate(resultado)

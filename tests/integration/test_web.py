@@ -16,7 +16,16 @@ def enviar(cliente, ruta, datos):
 
 
 def test_paginas_cargan_con_la_marca(cliente):
-    for ruta in ("/", "/viajes", "/rutas", "/combustible", "/reportes", "/catalogo"):
+    for ruta in (
+        "/",
+        "/viajes",
+        "/rutas",
+        "/combustible",
+        "/alertas",
+        "/monedas",
+        "/reportes",
+        "/catalogo",
+    ):
         respuesta = cliente.get(ruta)
         assert respuesta.status_code == 200, ruta
         assert "/static/img/logo-hidalgo.png" in respuesta.text
@@ -207,3 +216,47 @@ def test_importar_desde_el_panel(cliente):
     assert pagina.status_code == 200
     assert "1 importadas" in pagina.text
     assert "no existe un camión con patente ZZ000ZZ" in pagina.text
+
+
+def test_cotizacion_y_alerta_desde_el_panel(cliente):
+    hoy = datetime.now().date().isoformat()
+    pagina = enviar(cliente, "/monedas", {"fecha": hoy, "cotizacion": "1.25", "fuente": "manual"})
+    assert "cargada" in pagina.text and "1,2500" in pagina.text
+    repetida = enviar(cliente, "/monedas", {"fecha": hoy, "cotizacion": "1.3", "fuente": "manual"})
+    assert "Ya hay una cotización" in repetida.text
+
+    # Una carga que supera el tanque genera una alerta (RF-18) que se resuelve en /alertas
+    enviar(
+        cliente,
+        "/catalogo/camiones",
+        {
+            "patente": "AB123CD",
+            "marca": "Scania",
+            "modelo": "R450",
+            "capacidad_tanque_litros": "600",
+            "consumo_referencia_l100km": "38",
+        },
+    )
+    camion_id = cliente.get("/api/v1/camiones").json()[0]["id"]
+    enviar(
+        cliente,
+        "/combustible",
+        {
+            "camion_id": camion_id,
+            "fecha": datetime.now().strftime("%Y-%m-%dT%H:%M"),
+            "litros": "700",
+            "monto": "100000",
+            "moneda": "CLP",
+        },
+    )
+    assert "Supera el tanque" in cliente.get("/alertas").text
+    assert "Alertas abiertas: 1" in cliente.get("/").text
+
+    alerta_id = cliente.get("/api/v1/alertas").json()[0]["id"]
+    pagina = enviar(
+        cliente,
+        f"/alertas/{alerta_id}",
+        {"accion": "justificar", "comentario": "Tanque auxiliar instalado"},
+    )
+    assert "Alerta justificada" in pagina.text
+    assert "No hay alertas abiertas" in pagina.text

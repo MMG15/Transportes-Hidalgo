@@ -166,3 +166,21 @@ details[open] > summary { margin-bottom: 12px; }
 .ayuda { color: var(--texto-suave); font-size: .85rem; margin: 8px 0 0; }
 td .ayuda { margin: 0; font-size: .78rem; }
 .campo label input[type="checkbox"] { width: auto; margin-right: 6px; }
+
+/* ---------- Estados de alertas ---------- */
+.etiqueta--abierta { background: var(--naranja-claro); color: var(--naranja-oscuro); }
+.etiqueta--en_analisis { background: var(--azul-claro); color: var(--azul-oscuro); }
+.etiqueta--justificada { background: var(--exito-claro); color: var(--exito); }
+.etiqueta--confirmada { background: var(--error-claro); color: var(--error); }
+
+/* ---------- Pestañas ---------- */
+.pestanas { display: flex; gap: 4px; border-bottom: 2px solid var(--borde); }
+.pestana {
+  padding: 8px 14px; text-decoration: none; color: var(--texto-suave); font-weight: 600;
+  border-bottom: 3px solid transparent; margin-bottom: -2px;
+}
+.pestana--activa { color: var(--azul-oscuro); border-bottom-color: var(--naranja); }
+
+.boton--peligro { background: var(--error); border-color: var(--error); }
+.boton--peligro:hover { background: var(--texto); border-color: var(--texto); }
+textarea { resize: vertical; }

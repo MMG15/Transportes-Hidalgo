@@ -14,9 +14,14 @@ from flota.combustible.application.dto import ErrorLectura, FilaCarga
 from flota.combustible.application.importacion import ImportarCargas
 from flota.combustible.application.puertos import LectorCargas
 from flota.combustible.domain.consumo import FuenteReferencia
-from flota.shared.domain.errores import Duplicado, ReglaNegocioViolada
+from flota.combustible.domain.eventos import CargaRegistrada
+from flota.monedas.application.casos_de_uso import CargarCotizacion
+from flota.shared.domain.dinero import Dinero, Moneda
+from flota.shared.domain.errores import DatosInvalidos, Duplicado, ReglaNegocioViolada
 from tests.escenarios import SALIDA, flota_basica, iniciar_viaje, viaje_ida_y_vuelta
 from tests.fakes import UnidadDeTrabajoFake
+
+CLP = Moneda.CLP
 
 
 @pytest.fixture
@@ -33,10 +38,63 @@ def test_carga_se_asigna_automaticamente_al_viaje(uow):
     assert carga.viaje_id == viaje.id
 
 
-def test_carga_mayor_al_tanque_se_rechaza(uow):
+def test_carga_mayor_al_tanque_se_registra_y_publica_el_evento(uow):
+    """RF-18: se registra igual; el módulo de alertas la marca al recibir el evento."""
+    flota = flota_basica(uow)  # tanque de 600 L
+    carga = RegistrarCargaCombustible(uow).ejecutar(
+        DatosCarga(flota.camion.id, SALIDA, Decimal("700"))
+    )
+    assert uow.cargas.obtener(carga.id) is not None
+    assert uow.eventos_publicados == [CargaRegistrada(carga.id, None)]
+
+
+def test_carga_absurda_se_rechaza(uow):
+    """Más del doble del tanque es un error de tipeo o de lectura, no un consumo."""
+    flota = flota_basica(uow)
+    with pytest.raises(DatosInvalidos):
+        RegistrarCargaCombustible(uow).ejecutar(
+            DatosCarga(flota.camion.id, SALIDA, Decimal("1300"))
+        )
+
+
+def test_carga_en_pesos_chilenos_se_convierte_con_la_cotizacion_del_dia(uow):
+    flota = flota_basica(uow)
+    CargarCotizacion(uow).ejecutar(SALIDA.date(), Decimal("1.25"))
+    carga = RegistrarCargaCombustible(uow).ejecutar(
+        DatosCarga(flota.camion.id, SALIDA, Decimal("100"), monto=Decimal("120000"), moneda=CLP)
+    )
+    assert carga.importe.original == Dinero(Decimal("120000"), CLP)
+    assert carga.importe.cotizacion == Decimal("1.25")
+    assert carga.costo_ars == Decimal("150000.00")
+    assert carga.precio_litro == Decimal("1200.00")  # en la moneda del ticket
+    assert carga.importe.revisar_cotizacion is False
+
+
+def test_sin_cotizacion_del_dia_usa_la_anterior_y_marca_para_revisar(uow):
+    """CU-12 E1 (misma regla para todos los gastos)."""
+    flota = flota_basica(uow)
+    CargarCotizacion(uow).ejecutar(SALIDA.date() - timedelta(days=2), Decimal("1.20"))
+    carga = RegistrarCargaCombustible(uow).ejecutar(
+        DatosCarga(flota.camion.id, SALIDA, Decimal("100"), monto=Decimal("1000"), moneda=CLP)
+    )
+    assert carga.costo_ars == Decimal("1200.00")
+    assert carga.importe.revisar_cotizacion is True
+
+
+def test_gasto_en_clp_sin_ninguna_cotizacion_se_rechaza(uow):
     flota = flota_basica(uow)
     with pytest.raises(ReglaNegocioViolada):
-        RegistrarCargaCombustible(uow).ejecutar(DatosCarga(flota.camion.id, SALIDA, Decimal("700")))
+        RegistrarCargaCombustible(uow).ejecutar(
+            DatosCarga(flota.camion.id, SALIDA, Decimal("100"), monto=Decimal("1000"), moneda=CLP)
+        )
+
+
+def test_precio_por_litro_calcula_el_importe(uow):
+    flota = flota_basica(uow)
+    carga = RegistrarCargaCombustible(uow).ejecutar(
+        DatosCarga(flota.camion.id, SALIDA, Decimal("100"), precio_litro=Decimal("1450"))
+    )
+    assert carga.costo_ars == Decimal("145000.00")
 
 
 def test_carga_duplicada_por_referencia(uow):

@@ -11,26 +11,37 @@ from typing import Protocol, Self
 
 from sqlalchemy.orm import Session, sessionmaker
 
+from flota.alertas.application.puertos import UoWAlertas
+from flota.alertas.infrastructure.repositorios import RepositorioAlertasSql
 from flota.catalogo.infrastructure.repositorios import (
     RepositorioCamionesSql,
     RepositorioChoferesSql,
     RepositorioClientesSql,
     RepositorioProductosSql,
 )
+from flota.combustible.infrastructure.modelos import CargaCombustibleModel
 from flota.combustible.infrastructure.repositorios import RepositorioCargasSql
+from flota.monedas.infrastructure.repositorios import RepositorioTiposCambioSql
 from flota.reportes.application.puertos import UoWReportes
+from flota.shared.application.eventos import BusEventos
 from flota.shared.application.unidad_de_trabajo import UnidadDeTrabajoBase
 from flota.viajes.infrastructure.repositorios import RepositorioRutasSql, RepositorioViajesSql
 
+# Tablas con importes convertidos (para saber si una cotización ya se usó, RF-41).
+TABLAS_DE_GASTOS = (CargaCombustibleModel,)
 
-class UnidadDeTrabajoSistema(UoWReportes, Protocol):
+
+class UnidadDeTrabajoSistema(UoWReportes, UoWAlertas, Protocol):
     """La suma de lo que piden todos los módulos (la usan la API, el panel y la consola)."""
 
 
 class UnidadDeTrabajoSql(UnidadDeTrabajoBase):
     """Abre una sesión (transacción) nueva en cada `with`."""
 
-    def __init__(self, session_factory: sessionmaker[Session]) -> None:
+    def __init__(
+        self, session_factory: sessionmaker[Session], bus: BusEventos | None = None
+    ) -> None:
+        super().__init__(bus)
         self._session_factory = session_factory
 
     def __enter__(self) -> Self:
@@ -42,14 +53,16 @@ class UnidadDeTrabajoSql(UnidadDeTrabajoBase):
         self.rutas = RepositorioRutasSql(self._session)
         self.viajes = RepositorioViajesSql(self._session)
         self.cargas = RepositorioCargasSql(self._session)
+        self.tipos_cambio = RepositorioTiposCambioSql(self._session, TABLAS_DE_GASTOS)
+        self.alertas = RepositorioAlertasSql(self._session)
         return super().__enter__()
 
     def __exit__(self, *args: object) -> None:
         super().__exit__(*args)
         self._session.close()
 
-    def commit(self) -> None:
+    def _confirmar(self) -> None:
         self._session.commit()
 
-    def rollback(self) -> None:
+    def _descartar(self) -> None:
         self._session.rollback()

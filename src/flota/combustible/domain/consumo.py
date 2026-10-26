@@ -186,7 +186,7 @@ def calcular_consumo(
         )
 
     litros = sum((c.litros for c in propias), Decimal("0"))
-    importes = [c.importe for c in propias if c.importe is not None]
+    importes = [c.costo_ars for c in propias if c.costo_ars is not None]
     km = viaje.km_recorridos
     consumo_total = l100km(litros, km)
     referencia_total = _referencia_ponderada(tramos)
