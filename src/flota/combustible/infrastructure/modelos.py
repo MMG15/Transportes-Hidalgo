@@ -34,3 +34,8 @@ class CargaCombustibleModel(ConAuditoria, Base):
         ForeignKey("tipos_cambio.id", name="fk_cargas_tipo_cambio"), index=True
     )
     revisar_cotizacion: Mapped[bool] = mapped_column(default=False)
+    estado_validacion: Mapped[str] = mapped_column(String(15), default="validada")
+    comprobante_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("comprobantes.id", name="fk_cargas_comprobante"), index=True
+    )
+    motivo_anulacion: Mapped[str | None] = mapped_column(String(250))

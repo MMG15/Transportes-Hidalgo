@@ -31,6 +31,7 @@ MENU = [
     ("/viajes", "Viajes", Modulo.VIAJES),
     ("/rutas", "Rutas", Modulo.VIAJES),
     ("/combustible", "Combustible", Modulo.COMBUSTIBLE),
+    ("/comprobantes", "Tickets", Modulo.COMBUSTIBLE),
     ("/alertas", "Alertas", Modulo.ALERTAS),
     ("/monedas", "Tipo de cambio", Modulo.PEAJES_MONEDAS),
     ("/reportes", "Reportes", Modulo.TABLERO),

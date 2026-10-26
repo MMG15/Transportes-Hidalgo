@@ -7,7 +7,7 @@ from dataclasses import fields
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, or_, select
 
 from flota.combustible.domain.entidades import CargaCombustible
 from flota.combustible.domain.repositorios import RepositorioCargas
@@ -61,11 +61,25 @@ class RepositorioCargasSql(
         return self._todos(stmt)
 
     def existe_duplicado(self, carga: CargaCombustible) -> bool:
+        """RF-08. Es duplicada si coincide alguno de estos criterios:
+        - la misma referencia externa (nro. de ticket o de transacción de la tarjeta);
+        - el mismo camión, fecha y hora y litros;
+        - el mismo camión, estación, fecha y hora y monto (el criterio del documento)."""
         m = CargaCombustibleModel
+        criterios = [
+            and_(m.camion_id == carga.camion_id, m.fecha == carga.fecha, m.litros == carga.litros)
+        ]
         if carga.referencia_externa:
-            condicion = m.referencia_externa == carga.referencia_externa
-        else:
-            condicion = and_(
-                m.camion_id == carga.camion_id, m.fecha == carga.fecha, m.litros == carga.litros
+            criterios.append(m.referencia_externa == carga.referencia_externa)
+        if carga.estacion and carga.importe:
+            criterios.append(
+                and_(
+                    m.camion_id == carga.camion_id,
+                    m.fecha == carga.fecha,
+                    m.estacion == carga.estacion,
+                    m.monto_original == carga.importe.original.monto,
+                )
             )
-        return self._s.scalars(select(m.id).where(condicion).limit(1)).first() is not None
+        # Las anuladas también cuentan: su ticket ya se presentó (y la referencia es única).
+        stmt = select(m.id).where(or_(*criterios)).limit(1)
+        return self._s.scalars(stmt).first() is not None

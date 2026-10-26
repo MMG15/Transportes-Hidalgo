@@ -10,17 +10,25 @@ from uuid import UUID, uuid4
 
 from flota.shared.domain.dinero import CENTAVOS, ImporteGasto, Moneda
 from flota.shared.domain.errores import ReglaNegocioViolada
-from flota.shared.domain.validaciones import no_negativo, opcional, positivo
+from flota.shared.domain.validaciones import no_negativo, opcional, positivo, requerido
 from flota.viajes.domain.entidades import Viaje
 
 
 class OrigenDato(StrEnum):
     """De dónde proviene un registro de combustible."""
 
-    MANUAL = "manual"
+    MANUAL = "manual"  # tipeada en el panel o la API
     EXCEL = "excel"
-    TARJETA = "tarjeta"
+    TARJETA = "tarjeta"  # archivo del proveedor de la tarjeta de combustible
+    TICKET = "ticket"  # foto o PDF del ticket subido al panel (RF-02)
+    TELEGRAM = "telegram"  # foto enviada por el chofer (RF-01)
     GPS = "gps"
+
+
+class EstadoValidacion(StrEnum):
+    VALIDADA = "validada"  # la cargó o la revisó una persona
+    VALIDADA_IA = "validada_ia"  # la leyó la IA con buena confianza (CU-01)
+    ANULADA = "anulada"  # CU-02 E1: no corresponde; no cuenta para el consumo
 
 
 @dataclass(kw_only=True)
@@ -34,6 +42,9 @@ class CargaCombustible:
     origen: OrigenDato = OrigenDato.MANUAL
     referencia_externa: str | None = None  # nro. de ticket o id de transacción de la tarjeta
     viaje_id: UUID | None = None
+    estado_validacion: EstadoValidacion = EstadoValidacion.VALIDADA
+    comprobante_id: UUID | None = None  # foto / PDF del ticket (RF-07)
+    motivo_anulacion: str | None = None
     id: UUID = field(default_factory=uuid4)
 
     def __post_init__(self) -> None:
@@ -42,12 +53,19 @@ class CargaCombustible:
         self.estacion = opcional(self.estacion)
         self.referencia_externa = opcional(self.referencia_externa)
         self.origen = OrigenDato(self.origen)
+        self.estado_validacion = EstadoValidacion(self.estado_validacion)
 
     @property
     def cuenta_para_consumo(self) -> bool:
-        """Si la carga entra en el cálculo de L/100 km. (Con la validación de tickets, las
-        cargas pendientes o anuladas quedarán afuera.)"""
-        return True
+        """Una carga anulada no entra en el cálculo de L/100 km."""
+        return self.estado_validacion != EstadoValidacion.ANULADA
+
+    def anular(self, motivo: str) -> None:
+        """CU-02 E1: la carga no corresponde (ticket ajeno, duplicado no detectado, error)."""
+        if self.estado_validacion == EstadoValidacion.ANULADA:
+            raise ReglaNegocioViolada("La carga ya está anulada")
+        self.motivo_anulacion = requerido(motivo, "motivo")
+        self.estado_validacion = EstadoValidacion.ANULADA
 
     @property
     def moneda(self) -> Moneda | None:

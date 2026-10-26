@@ -21,6 +21,8 @@ from flota.catalogo.infrastructure.repositorios import (
 )
 from flota.combustible.infrastructure.modelos import CargaCombustibleModel
 from flota.combustible.infrastructure.repositorios import RepositorioCargasSql
+from flota.comprobantes.application.puertos import UoWComprobantes
+from flota.comprobantes.infrastructure.repositorios import RepositorioComprobantesSql
 from flota.monedas.infrastructure.repositorios import RepositorioTiposCambioSql
 from flota.reportes.application.puertos import UoWReportes
 from flota.shared.application.eventos import BusEventos
@@ -35,7 +37,7 @@ from flota.viajes.infrastructure.repositorios import RepositorioRutasSql, Reposi
 TABLAS_DE_GASTOS = (CargaCombustibleModel,)
 
 
-class UnidadDeTrabajoSistema(UoWReportes, UoWAlertas, UoWUsuarios, Protocol):
+class UnidadDeTrabajoSistema(UoWReportes, UoWAlertas, UoWUsuarios, UoWComprobantes, Protocol):
     """La suma de lo que piden todos los módulos (la usan la API, el panel y la consola)."""
 
 
@@ -63,6 +65,7 @@ class UnidadDeTrabajoSql(UnidadDeTrabajoBase):
         self.tipos_cambio = RepositorioTiposCambioSql(self._session, TABLAS_DE_GASTOS)
         self.alertas = RepositorioAlertasSql(self._session)
         self.usuarios = RepositorioUsuariosSql(self._session)
+        self.comprobantes = RepositorioComprobantesSql(self._session)
         self.auditoria = RepositorioAuditoriaSql(self._session)
         return super().__enter__()
 

@@ -17,8 +17,10 @@ from flota import marca
 from flota.alertas.application import manejadores as alertas
 from flota.reportes.application.puertos import GeneradorReporte
 from flota.reportes.infrastructure.excel import GeneradorReporteExcel
+from flota.shared.application.archivos import AlmacenArchivos
 from flota.shared.application.eventos import BusEventos
 from flota.shared.domain.auditoria import SISTEMA, Actor
+from flota.shared.infrastructure.archivos import AlmacenEnDisco
 from flota.shared.infrastructure.config import get_settings
 from flota.shared.infrastructure.db import crear_engine, crear_session_factory
 from flota.unidad_de_trabajo import UnidadDeTrabajoSistema, UnidadDeTrabajoSql
@@ -49,6 +51,10 @@ def crear_uow(actor: Actor = SISTEMA) -> UnidadDeTrabajoSistema:
     """`actor`: quién opera (para la auditoría). El panel y la API lo cambian al identificar
     al usuario; la consola usa `CONSOLA`."""
     return UnidadDeTrabajoSql(_session_factory(), _bus(), actor)
+
+
+def crear_almacen() -> AlmacenArchivos:
+    return AlmacenEnDisco(get_settings().carpeta_archivos)
 
 
 def crear_hasher() -> HasherContrasenas:

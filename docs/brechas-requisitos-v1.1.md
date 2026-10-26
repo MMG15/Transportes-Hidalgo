@@ -318,4 +318,5 @@ Puntos clasificados **(b)**: el documento debe reflejar lo que el código ya res
 12. **Nombres de columnas de auditoría:** `creado_en` / `actualizado_en` (español, como el resto del modelo).
 13. **Herramientas de backoffice:** documentar la consola (`flota importar`, `importar-carpeta`, `exportar`) y su uso con tareas programadas, como funciones de ROL-07 en la sección 13.2.
 14. **Sección 14.3 (estructura):** actualizar el árbol al que se apruebe en la decisión 4.2 (paquete `flota` en `src/`, sin carpeta `backend/` mientras no exista `frontend/`).
-15. **Control de cambios (sección 18):** registrar la v1.2 con estos puntos y las decisiones 4.1 a 4.3 una vez tomadas.
+15. **Comprobante como entidad propia** (agregado en la Sesión 7): agregar `COMPROBANTE` al modelo de datos (archivo, canal, estado, JSON extraído, confianza, problemas). La carga, el peaje y el viático se crean recién cuando los datos están completos y validados, y referencian su comprobante; `CARGA_COMBUSTIBLE.estado_validacion` queda en validada / validada por IA / anulada. Así un ticket incompleto nunca es una carga a medias.
+16. **Control de cambios (sección 18):** registrar la v1.2 con estos puntos y las decisiones 4.1 a 4.3 una vez tomadas.

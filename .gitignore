@@ -16,3 +16,6 @@ reportes/
 !tests/**/*.xlsx
 # Bases SQLite de prueba local
 *.db
+
+# Fotos y PDF de comprobantes (datos de la empresa: van en el respaldo, no en git)
+archivos/

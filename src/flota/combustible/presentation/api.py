@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, UploadFile
 
 from flota.combustible.application.casos_de_uso import (
+    AnularCarga,
     ConsultasCargas,
     DatosCarga,
     ObtenerConsumoViaje,
@@ -14,6 +15,7 @@ from flota.combustible.application.casos_de_uso import (
 from flota.combustible.domain.entidades import OrigenDato
 from flota.combustible.presentation.archivos import importar_subida
 from flota.combustible.presentation.esquemas import (
+    Anulacion,
     CargaCrear,
     CargaLeer,
     ConsumoLeer,
@@ -47,6 +49,12 @@ def listar_cargas(
     fin = datetime.combine(hasta + timedelta(days=1), time.min) if hasta else None
     cargas = ConsultasCargas(uow).listar(camion_id, inicio, fin, limite, desplazamiento)
     return [CargaLeer.model_validate(c) for c in cargas]
+
+
+@router.post("/cargas/{carga_id}/anular", response_model=CargaLeer)
+def anular_carga(carga_id: UUID, datos: Anulacion, uow: UoW):
+    """CU-02 E1: la carga queda registrada pero deja de contar para el consumo."""
+    return CargaLeer.model_validate(AnularCarga(uow).ejecutar(carga_id, datos.motivo))
 
 
 @router.post("/cargas/importar", response_model=ResultadoImportacionLeer)

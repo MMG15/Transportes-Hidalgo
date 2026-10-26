@@ -18,6 +18,8 @@ from flota.catalogo.presentation import api as catalogo_api
 from flota.catalogo.presentation import web as catalogo_web
 from flota.combustible.presentation import api as combustible_api
 from flota.combustible.presentation import web as combustible_web
+from flota.comprobantes.presentation import api as comprobantes_api
+from flota.comprobantes.presentation import web as comprobantes_web
 from flota.monedas.presentation import api as monedas_api
 from flota.monedas.presentation import web as monedas_web
 from flota.reportes.presentation import api as reportes_api
@@ -45,6 +47,7 @@ ROUTERS_API = (
     catalogo_api.router,
     viajes_api.router,
     combustible_api.router,
+    comprobantes_api.router,
     alertas_api.router,
     monedas_api.router,
     reportes_api.router,
@@ -55,6 +58,7 @@ ROUTERS_WEB = (
     reportes_web.router,
     viajes_web.router,
     combustible_web.router,
+    comprobantes_web.router,
     alertas_web.router,
     monedas_web.router,
     catalogo_web.router,

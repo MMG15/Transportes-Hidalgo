@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block titulo %}Revisar ticket{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Revisar ticket</h1>
+    <p>Recibido el {{ c.recibido_en | fecha }} por {{ c.canal }} · Estado: <strong>{{ c.estado }}</strong>
+      {% if c.confianza is not none %} · Confianza de la lectura: {{ (c.confianza * 100) | numero(0) }} %{% endif %}</p>
+  </div>
+  <a class="boton boton--acento" href="/comprobantes">← Pendientes</a>
+</div>
+
+{% if c.problemas %}
+<div class="aviso aviso--info"><strong>Para revisar:</strong><ul>{% for p in c.problemas %}<li>{{ p }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<div class="grilla grilla--comprobante">
+  <section class="tarjeta">
+    <h2>Imagen original</h2>
+    {% if c.es_imagen %}
+      <a href="/comprobantes/{{ c.id }}/archivo" target="_blank" rel="noopener"><img class="comprobante__imagen" src="/comprobantes/{{ c.id }}/archivo" alt="Ticket"></a>
+    {% else %}
+      <object class="comprobante__pdf" data="/comprobantes/{{ c.id }}/archivo" type="application/pdf">
+        <a href="/comprobantes/{{ c.id }}/archivo" target="_blank" rel="noopener">Abrir el PDF</a>
+      </object>
+    {% endif %}
+  </section>
+
+  <section class="tarjeta tarjeta--acento">
+    <h2>Datos de la carga</h2>
+    {% if c.abierto %}
+    <form class="formulario" method="post" action="/comprobantes/{{ c.id }}/validar">
+      <div class="campo"><label for="camion_id">Camión</label>
+        <select id="camion_id" name="camion_id" required>
+          {% for cam in camiones %}<option value="{{ cam.id }}" {% if cam.id == c.camion_id or cam.patente == datos.get("patente") %}selected{% endif %}>{{ cam.patente }}</option>{% endfor %}
+        </select></div>
+      <div class="campo"><label for="fecha">Fecha y hora</label><input id="fecha" name="fecha" type="datetime-local" value="{{ datos.get('fecha_hora', '')[:16] or (ahora | fecha_input) }}" required></div>
+      <div class="campo"><label for="litros">Litros</label><input id="litros" name="litros" type="number" step="0.01" min="0.01" value="{{ datos.get('litros', '') }}" required></div>
+      <div class="campo"><label for="monto">Importe total</label><input id="monto" name="monto" type="number" step="0.01" min="0" value="{{ datos.get('monto', '') }}"></div>
+      <div class="campo"><label for="moneda">Moneda</label>
+        <select id="moneda" name="moneda">{% for mon in ["ARS", "CLP"] %}<option value="{{ mon }}" {% if datos.get("moneda") == mon %}selected{% endif %}>{{ mon }}</option>{% endfor %}</select></div>
+      <div class="campo"><label for="odometro_km">Odómetro (km)</label><input id="odometro_km" name="odometro_km" type="number" step="0.1" min="0" value="{{ datos.get('kilometraje', '') }}"></div>
+      <div class="campo"><label for="estacion">Estación</label><input id="estacion" name="estacion" value="{{ datos.get('estacion', '') }}"></div>
+      <div class="campo"><label for="referencia_externa">Nro. de ticket</label><input id="referencia_externa" name="referencia_externa" value="{{ datos.get('numero_ticket', '') }}"></div>
+      <div class="formulario__acciones"><button class="boton" type="submit">Validar y registrar la carga</button></div>
+    </form>
+    <details>
+      <summary>Descartar el ticket</summary>
+      <form class="formulario--linea" method="post" action="/comprobantes/{{ c.id }}/descartar">
+        <div class="campo"><label>Motivo<input name="motivo" required placeholder="Ilegible / no es de la empresa"></label></div>
+        <button class="boton boton--chico boton--peligro" type="submit">Descartar</button>
+      </form>
+    </details>
+    {% else %}
+      <p>Este ticket ya está <strong>{{ c.estado }}</strong>{% if c.motivo_descarte %}: {{ c.motivo_descarte }}{% endif %}.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

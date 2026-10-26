@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from flota.alertas.application.casos_de_uso import EvaluarAlertasCarga, EvaluarAlertasViaje
 from flota.alertas.application.puertos import UoWAlertas
-from flota.combustible.domain.eventos import CargaRegistrada
+from flota.combustible.domain.eventos import CargaAnulada, CargaRegistrada
 from flota.shared.application.eventos import BusEventos
 from flota.viajes.domain.eventos import TramoCerrado, ViajeFinalizado
 
@@ -32,4 +32,10 @@ def suscribir(
 
     bus.suscribir(TramoCerrado, evaluar_viaje)
     bus.suscribir(ViajeFinalizado, evaluar_viaje)
+
+    def reevaluar_viaje(evento: CargaAnulada) -> None:
+        if evento.viaje_id:
+            EvaluarAlertasViaje(crear_uow(), umbral_desvio_pct).ejecutar(evento.viaje_id)
+
     bus.suscribir(CargaRegistrada, evaluar_carga)
+    bus.suscribir(CargaAnulada, reevaluar_viaje)

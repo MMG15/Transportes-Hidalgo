@@ -12,3 +12,11 @@ from flota.shared.domain.eventos import Evento
 class CargaRegistrada(Evento):
     carga_id: UUID
     viaje_id: UUID | None
+
+
+@dataclass(frozen=True)
+class CargaAnulada(Evento):
+    """Cambia el consumo del viaje: hay que volver a evaluar sus alertas."""
+
+    carga_id: UUID
+    viaje_id: UUID | None

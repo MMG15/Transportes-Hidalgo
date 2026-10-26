@@ -52,6 +52,7 @@ Transportes-Hidalgo/
     ├── catalogo/         MOD-01 Camiones, choferes, clientes y productos
     ├── viajes/           MOD-02 Rutas, viajes y tramos (cargado / vacío)
     ├── combustible/      MOD-03 Cargas, importación de tarjeta y cálculo de consumo
+    ├── comprobantes/     MOD-03/14 Fotos y PDF de tickets: recepción, validación y respaldo
     ├── alertas/          MOD-05 Alertas con estado y resolución; reaccionan a eventos
     ├── monedas/          MOD-10 Tipo de cambio CLP → ARS y conversión de gastos
     ├── reportes/         MOD-12 Tablero, reportes y Excel (sólo lectura)
@@ -523,6 +524,30 @@ HTMX (una librería de 14 KB) lee los atributos `hx-*`: envía el formulario por
 y responde con el fragmento (`fragmento(...)`); sin HTMX, el mismo formulario funciona con
 Post/Redirect/Get. Es la decisión 4.1 del análisis de brechas: interactividad sin React.
 
+### 4.10 Archivos subidos: `UploadFile`, `async def` y respuestas binarias
+
+En [comprobantes/presentation/web.py](../src/flota/comprobantes/presentation/web.py):
+
+```python
+@router.post("/comprobantes")
+async def subir(uow: UoW, almacen: Almacen, archivo: UploadFile):
+    recibido = ArchivoRecibido(await archivo.read(), archivo.content_type or "")
+```
+
+- Un formulario con archivos se envía como `multipart/form-data` (`enctype` en el HTML);
+  FastAPI lo entrega como `UploadFile`.
+- `async def` / `await`: leer el archivo es una operación de entrada/salida; con `await` el
+  servidor puede atender otros pedidos mientras espera. Las demás rutas son `def` comunes:
+  FastAPI las corre en un hilo aparte, así que tampoco bloquean.
+- Para devolver la imagen: `Response(contenido, media_type=tipo)`. El encabezado
+  `X-Content-Type-Options: nosniff` impide que el navegador "adivine" otro tipo de archivo.
+- `capture="environment"` en el `<input type="file">` abre la cámara trasera en el celular.
+
+**Seguridad al guardar archivos** ([shared/infrastructure/archivos.py](../src/flota/shared/infrastructure/archivos.py)):
+el nombre lo genera el sistema (un UUID), nunca el usuario, y `Path.is_relative_to` verifica que
+la ruta final quede dentro de la carpeta: así un nombre como `../../config` no puede escribir
+fuera (ataque de *path traversal*). Además se aceptan sólo JPG, PNG, WEBP y PDF de hasta 10 MB.
+
 ---
 
 ## 5. Arquitectura limpia y patrones de diseño
@@ -565,6 +590,7 @@ testea sin base de datos y se puede cambiar de tecnología tocando sólo `infras
 | **Observador / bus de eventos** | `BusEventos`, `alertas/application/manejadores.py` | Los módulos reaccionan a eventos de otros sin depender de ellos. |
 | **Contexto de la operación (actor)** | `uow.actor`, `uow.auditar(...)` | Quién opera viaja con la unidad de trabajo: la auditoría lo registra sin pasarlo por parámetro. |
 | **Middleware** | `SessionMiddleware` | Código que envuelve todos los pedidos (sesión). |
+| **Límite de transacción** | `RegistrarCargaCombustible.registrar_en(uow, ...)` | La lógica se separa del `commit` para combinar varios pasos en UNA transacción (todo o nada). |
 
 ### Eventos: cómo un módulo reacciona a otro sin depender de él
 
@@ -581,6 +607,18 @@ viajes: FinalizarViaje ──registra──► ViajeFinalizado
 - [bootstrap.py](../src/flota/bootstrap.py) arma el bus y suscribe los manejadores de cada módulo.
 - Si un manejador falla, el error se registra y la operación original igual queda guardada.
 - Así `viajes` y `combustible` no importan a `alertas` (que depende de ellos): no hay ciclos.
+
+### Una sola transacción para varios pasos
+
+Validar un ticket hace dos cosas: registrar la carga y marcar el comprobante como procesado.
+Si se hicieran en dos transacciones y la segunda fallara, quedaría una carga con su ticket todavía
+"pendiente". Por eso `RegistrarCargaCombustible` tiene dos métodos:
+
+- `registrar_en(uow, datos)`: aplica todas las reglas y guarda, **sin** confirmar;
+- `ejecutar(datos)`: abre la transacción, llama a `registrar_en` y confirma.
+
+`ValidarComprobanteCombustible` abre **una** transacción, llama a `registrar_en`, marca el
+comprobante y recién ahí confirma: o se guardan las dos cosas, o ninguna.
 
 ### Regla de negocio destacada: referencia de consumo (RF-11, RF-13, RF-16)
 
@@ -764,6 +802,9 @@ Reglas:
 | **Token** | Texto firmado que identifica al usuario en la API (`Bearer`). |
 | **401 / 403** | Sin identificar / identificado pero sin permiso. |
 | **Auditoría** | Registro de quién cambió qué, cuándo, antes y después (RF-55). |
+| **Comprobante** | La foto o PDF de un ticket tal como llegó; de él se crea la carga. |
+| **Transacción** | Grupo de cambios que se guardan todos juntos o ninguno. |
+| **Path traversal** | Ataque que usa `../` en un nombre de archivo para salir de la carpeta. |
 
 ---
 
@@ -779,10 +820,12 @@ Cada cambio del proyecto agrega una línea acá y, si introduce conceptos nuevos
 | 2026-10-26 | **Sesión 4**: código reorganizado por módulo; rutas y tramos cargado / vacío; referencia por ruta e histórico. Conceptos: `Protocol`, `@classmethod` fábrica, agregados, `relationship` con cascada, migración de datos con `batch_alter_table`, Object Mother. Guía reescrita con las rutas nuevas. | Todas |
 | 2026-10-26 | **Sesión 5**: módulos `monedas` (tipo de cambio, `Dinero`, `ImporteGasto`) y `alertas` (entidad con ciclo de vida, CU-06); eventos de dominio y bus. Conceptos: objetos de valor, métodos especiales, closures, `logging`, alias de tipos. | 1, 3.11–3.13, 5, 9, 12 |
 | 2026-10-26 | **Sesión 6**: módulo `usuarios` (roles ROL-01 a ROL-07, permisos por módulo, login, token de API) y auditoría (RF-55); HTMX en alertas. Conceptos: hash Argon2, middleware, cookies firmadas, dependencias encadenadas, objetos llamables (`__call__`). | 1, 4.8, 4.9, 5, 8, 12 |
+| 2026-10-26 | **Sesión 7**: módulo `comprobantes` (foto o PDF del ticket, pendientes, validación CU-02, descarte), almacenamiento de archivos, estado de validación y anulación de cargas, fecha no futura, duplicados (RF-08). Conceptos: `UploadFile`, `async`/`await`, respuestas binarias, *path traversal*, límites de transacción. | 1, 4.10, 5, 12 |
 
 Notas por sesión: [01 · Base del sistema](sesiones/01-base-del-sistema.md) ·
 [02 · Marca y panel web](sesiones/02-marca-y-panel-web.md) ·
 [03 · Entorno local y documentación](sesiones/03-entorno-local-y-documentacion.md) ·
 [04 · Módulos, rutas y tramos](sesiones/04-modulos-rutas-y-tramos.md) ·
 [05 · Moneda, alertas y eventos](sesiones/05-moneda-alertas-y-eventos.md) ·
-[06 · Usuarios, roles y auditoría](sesiones/06-usuarios-roles-y-auditoria.md)
+[06 · Usuarios, roles y auditoría](sesiones/06-usuarios-roles-y-auditoria.md) ·
+[07 · Tickets y validación](sesiones/07-tickets-y-validacion.md)

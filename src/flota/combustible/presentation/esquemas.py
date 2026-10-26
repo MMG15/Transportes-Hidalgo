@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from flota.combustible.domain.consumo import FuenteReferencia
-from flota.combustible.domain.entidades import OrigenDato
+from flota.combustible.domain.entidades import EstadoValidacion, OrigenDato
 from flota.shared.domain.dinero import Moneda
 from flota.shared.presentation.esquemas import Esquema, Numero
 from flota.viajes.domain.entidades import EstadoCarga
@@ -55,6 +55,13 @@ class CargaLeer(Esquema):
     estacion: str | None
     origen: OrigenDato
     referencia_externa: str | None
+    estado_validacion: EstadoValidacion
+    comprobante_id: UUID | None
+    motivo_anulacion: str | None
+
+
+class Anulacion(BaseModel):
+    motivo: str = Field(min_length=1)
 
 
 class ResultadoImportacionLeer(Esquema):

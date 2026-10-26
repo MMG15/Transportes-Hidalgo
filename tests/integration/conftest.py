@@ -6,9 +6,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
 from flota import bootstrap
-from flota.dependencias import obtener_uow
+from flota.dependencias import obtener_almacen, obtener_uow
 from flota.main import create_app
 from flota.modelos import Base
+from flota.shared.infrastructure.archivos import AlmacenEnDisco
 from flota.shared.infrastructure.db import crear_session_factory
 from flota.unidad_de_trabajo import UnidadDeTrabajoSql
 from flota.usuarios.application.casos_de_uso import CrearUsuario, DatosUsuario
@@ -35,10 +36,12 @@ def crear_uow():
 
 
 @pytest.fixture
-def cliente_anonimo(crear_uow):
-    """App completa (API + panel) sobre la base de prueba, sin sesión iniciada."""
+def cliente_anonimo(crear_uow, tmp_path):
+    """App completa (API + panel) sobre la base de prueba, sin sesión iniciada.
+    Los comprobantes se guardan en una carpeta temporal que pytest borra sola."""
     app = create_app()
     app.dependency_overrides[obtener_uow] = crear_uow
+    app.dependency_overrides[obtener_almacen] = lambda: AlmacenEnDisco(tmp_path / "archivos")
     with TestClient(app) as c:
         yield c
 

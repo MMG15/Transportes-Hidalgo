@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse
 
 from flota.catalogo.application.casos_de_uso import ConsultasCatalogo
 from flota.combustible.application.casos_de_uso import (
+    AnularCarga,
     ConsultasCargas,
     DatosCarga,
     RegistrarCargaCombustible,
@@ -24,6 +26,7 @@ from flota.web.plantillas import (
     FechaHora,
     Id,
     Numero,
+    Texto,
     TextoOpcional,
     decimal_opcional,
     ejecutar,
@@ -80,6 +83,13 @@ def registrar_carga(
     )
     registrar = RegistrarCargaCombustible(uow)
     return ejecutar("/combustible", lambda: registrar.ejecutar(datos), "Carga registrada.")
+
+
+@router.post("/combustible/{carga_id}/anular")
+def anular_carga(carga_id: UUID, uow: UoW, motivo: Texto):
+    return ejecutar(
+        "/combustible", lambda: AnularCarga(uow).ejecutar(carga_id, motivo), "Carga anulada."
+    )
 
 
 @router.post("/combustible/importar", response_class=HTMLResponse)

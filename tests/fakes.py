@@ -13,7 +13,9 @@ from flota.catalogo.domain.repositorios import (
     RepositorioProductos,
 )
 from flota.combustible.domain.repositorios import RepositorioCargas
+from flota.comprobantes.domain.repositorios import RepositorioComprobantes
 from flota.monedas.domain.repositorios import RepositorioTiposCambio
+from flota.shared.application.archivos import AlmacenArchivos
 from flota.shared.application.eventos import BusEventos
 from flota.shared.application.unidad_de_trabajo import UnidadDeTrabajoBase
 from flota.shared.domain.dinero import Moneda
@@ -112,9 +114,19 @@ class CargasFake(_EnMemoria, RepositorioCargas):
 
     def existe_duplicado(self, carga):
         def igual(c):
-            if carga.referencia_externa:
-                return c.referencia_externa == carga.referencia_externa
-            return (c.camion_id, c.fecha, c.litros) == (carga.camion_id, carga.fecha, carga.litros)
+            misma_hora = (c.camion_id, c.fecha) == (carga.camion_id, carga.fecha)
+            return (
+                (carga.referencia_externa and c.referencia_externa == carga.referencia_externa)
+                or (misma_hora and c.litros == carga.litros)
+                or (
+                    misma_hora
+                    and carga.estacion
+                    and carga.importe
+                    and c.importe
+                    and c.estacion == carga.estacion
+                    and c.importe.original.monto == carga.importe.original.monto
+                )
+            )
 
         return bool(self._filtrar(igual))
 
@@ -174,6 +186,30 @@ class AuditoriaFake(_EnMemoria, RepositorioAuditoria):
         return sorted(lista, key=lambda r: r.fecha, reverse=True)[:limite]
 
 
+class ComprobantesFake(_EnMemoria, RepositorioComprobantes):
+    def listar_por_estado(self, estados, tipo=None, limite=200):
+        lista = self._filtrar(lambda c: c.estado in estados and (tipo is None or c.tipo == tipo))
+        return sorted(lista, key=lambda c: c.recibido_en)[:limite]
+
+    def contar_por_estado(self, estado):
+        return len(self._filtrar(lambda c: c.estado == estado))
+
+
+class AlmacenFake(AlmacenArchivos):
+    """Guarda los archivos en un diccionario."""
+
+    def __init__(self) -> None:
+        self.archivos: dict[str, bytes] = {}
+
+    def guardar(self, contenido, extension, carpeta):
+        clave = f"{carpeta}/{len(self.archivos) + 1}.{extension}"
+        self.archivos[clave] = contenido
+        return clave
+
+    def leer(self, clave):
+        return self.archivos[clave]
+
+
 class HasherFake(HasherContrasenas):
     """Argon2 es lento a propósito (dificulta adivinar contraseñas): en tests no hace falta."""
 
@@ -200,6 +236,7 @@ class UnidadDeTrabajoFake(UnidadDeTrabajoBase):
         self.alertas = AlertasFake()
         self.usuarios = UsuariosFake()
         self.auditoria = AuditoriaFake()
+        self.comprobantes = ComprobantesFake()
         self.commits = 0
         self.eventos_publicados: list = []
 

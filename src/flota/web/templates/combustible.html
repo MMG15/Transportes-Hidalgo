@@ -4,7 +4,7 @@
 <div class="titulo-pagina">
   <div>
     <h1>Combustible</h1>
-    <p>Cada carga se asigna sola al viaje que el camión tenía en curso en esa fecha.</p>
+    <p>Cada carga se asigna sola al viaje que el camión tenía en curso en esa fecha. Para registrar a partir de la foto de un ticket, usá <a href="/comprobantes">Tickets</a>.</p>
   </div>
 </div>
 
@@ -59,7 +59,7 @@
   <div class="tabla-contenedor">
     <table>
       <thead>
-        <tr><th>Fecha</th><th>Patente</th><th class="num">Litros</th><th class="num">Precio/L</th><th class="num">Importe original</th><th class="num">En ARS</th><th>Estación</th><th>Ticket</th><th>Origen</th><th>Viaje</th></tr>
+        <tr><th>Fecha</th><th>Patente</th><th class="num">Litros</th><th class="num">Precio/L</th><th class="num">Importe original</th><th class="num">En ARS</th><th>Estación</th><th>Ticket</th><th>Origen</th><th>Viaje</th><th></th></tr>
       </thead>
       <tbody>
         {% for c in cargas %}
@@ -74,9 +74,22 @@
           <td>{{ c.referencia_externa or "—" }}</td>
           <td><span class="etiqueta etiqueta--origen">{{ c.origen }}</span></td>
           <td>{% if c.viaje_id %}✔ Asignada{% else %}<span style="color:var(--texto-suave)">Sin viaje</span>{% endif %}</td>
+          <td>
+            {% if c.comprobante_id %}<a href="/comprobantes/{{ c.comprobante_id }}" title="Ver el ticket">🧾</a>{% endif %}
+            {% if c.estado_validacion == "anulada" %}<span class="etiqueta etiqueta--finalizado" title="{{ c.motivo_anulacion }}">Anulada</span>
+            {% else %}
+            <details>
+              <summary>Anular</summary>
+              <form class="formulario--linea" method="post" action="/combustible/{{ c.id }}/anular">
+                <div class="campo"><label>Motivo<input name="motivo" required></label></div>
+                <button class="boton boton--chico boton--peligro" type="submit">Anular</button>
+              </form>
+            </details>
+            {% endif %}
+          </td>
         </tr>
         {% else %}
-        <tr><td colspan="10" class="vacio">Todavía no hay cargas registradas.</td></tr>
+        <tr><td colspan="11" class="vacio">Todavía no hay cargas registradas.</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulo %}Tickets pendientes{% endblock %}
+{% block contenido %}
+<div class="titulo-pagina">
+  <div>
+    <h1>Tickets pendientes de validación</h1>
+    <p>Comprobantes que no se pudieron registrar solos: se revisan mirando la imagen (CU-02).</p>
+  </div>
+</div>
+
+<section class="tarjeta tarjeta--acento">
+  <h2>Subir un ticket</h2>
+  <form class="formulario--linea" method="post" action="/comprobantes" enctype="multipart/form-data">
+    <div class="campo"><label for="archivo">Foto o PDF del ticket</label>
+      <input id="archivo" name="archivo" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" required></div>
+    <button class="boton" type="submit">Subir</button>
+  </form>
+  <p class="ayuda">Desde el celular abre la cámara. Máximo 10 MB. La imagen se guarda como respaldo de la carga.</p>
+</section>
+
+<section class="tarjeta">
+  <div class="tabla-contenedor">
+    <table>
+      <thead><tr><th>Recibido</th><th>Canal</th><th>Camión</th><th>Por qué está pendiente</th><th></th></tr></thead>
+      <tbody>
+        {% for c in comprobantes %}
+        <tr>
+          <td>{{ c.recibido_en | fecha }}</td>
+          <td><span class="etiqueta etiqueta--origen">{{ c.canal }}</span></td>
+          <td>{{ patentes.get(c.camion_id, "—") }}</td>
+          <td>{{ c.problemas | join("; ") }}</td>
+          <td><a class="boton boton--chico" href="/comprobantes/{{ c.id }}">Revisar</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="vacio">No hay tickets pendientes. ✔</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     cookies_seguras: bool = False  # True en producción (sólo HTTPS)
     horas_sesion: int = 12
 
+    # Dónde se guardan las fotos y PDF de los comprobantes (RF-07). Se incluye en el respaldo.
+    carpeta_archivos: Path = RAIZ_PROYECTO / "archivos"
+
     umbral_desvio_pct: Decimal = Decimal("15")
     tolerancia_tanque_pct: Decimal = Decimal("5")
 

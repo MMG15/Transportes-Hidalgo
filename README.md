@@ -4,7 +4,7 @@
 
 Control de viajes de camiones (distribución de cal y otros productos) y del **consumo de combustible por viaje**.
 
-- **Panel web** en http://127.0.0.1:8000 — tablero, viajes, rutas, combustible, alertas, tipo de cambio, reportes y catálogo.
+- **Panel web** en http://127.0.0.1:8000 — tablero, viajes, rutas, combustible, tickets, alertas, tipo de cambio, reportes, catálogo y usuarios (con login).
 - **API REST** en http://127.0.0.1:8000/docs
 - **Reportes Excel** con la identidad de la empresa.
 - **Documento de requisitos v1.1** (referencia funcional del sistema): [`docs/requisitos_v1.1.md`](docs/requisitos_v1.1.md) · [versión Word](docs/word/Requisitos_Sistema_Trazabilidad_Hidalgo_v1.1.docx) · análisis de brechas código ↔ requisitos en [`docs/brechas-requisitos-v1.1.md`](docs/brechas-requisitos-v1.1.md).
@@ -31,6 +31,7 @@ src/flota/
 ├── catalogo/      MOD-01  Camiones, choferes, clientes y productos
 ├── viajes/        MOD-02  Rutas, viajes y tramos cargado / vacío
 ├── combustible/   MOD-03  Cargas, importación de tarjeta y cálculo de consumo por tramo
+├── comprobantes/  MOD-03  Fotos y PDF de tickets: recepción, validación y respaldo
 ├── alertas/       MOD-05  Alertas con estado y resolución (generadas por eventos)
 ├── monedas/       MOD-10  Tipo de cambio CLP → ARS y conversión de gastos
 ├── reportes/      MOD-12  Tablero, reportes filtrables y Excel
