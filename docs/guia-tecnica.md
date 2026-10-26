@@ -41,7 +41,8 @@ Transportes-Hidalgo/
 ├── .env / .env.example   Configuración (contraseña de la base). .env NO se sube a git
 ├── alembic.ini           Configuración de migraciones
 ├── migrations/           Historial de cambios de la base de datos
-├── docs/                 Esta guía + notas de cada sesión de trabajo
+├── docs/                 Esta guía, requisitos v1.1, análisis de brechas, notas de sesión,
+│                         prompts de trabajo (docs/prompts/) y versiones Word (docs/word/)
 ├── tests/                Tests unitarios y de integración
 └── src/flota/
     ├── domain/           Reglas del negocio (Python puro)
@@ -466,7 +467,8 @@ Cómo funciona ([generar_word.py](../scripts/generar_word.py) + [word_filtro.lua
 2. **pandoc** lee cada Markdown como un árbol de elementos y el **filtro Lua** lo ajusta: logo arriba,
    primer título como título del documento, enlaces a archivos locales convertidos en texto.
 3. Escribe el `.docx` con fecha fija (`SOURCE_DATE_EPOCH` = último commit): si el texto no cambió,
-   el Word sale idéntico y git no lo marca como modificado.
+   el Word sale idéntico y git no lo marca como modificado. Como pandoc no aplica esa fecha a las
+   partes que copia de la plantilla, el script reescribe el ZIP con la misma fecha en todas las entradas.
 
 Reglas:
 
@@ -503,6 +505,7 @@ Cada cambio del proyecto agrega una línea acá y, si introduce conceptos nuevos
 |---|---|---|
 | 2026-10-21 | Creación de la guía a partir de las sesiones 1 y 2. Proyecto verificado en local (26 tests OK, servidor con SQLite). | Todas |
 | 2026-10-21 | Versión Word de la guía y de cada sesión (`scripts/generar_word.py`). Conceptos: `match`/`case`, `subprocess`, `zipfile`, `re`, pandoc y filtros Lua. | 2, 3.9, 11 |
+| 2026-10-26 | Incorporación del [documento de requisitos v1.1](requisitos_v1.1.md) y del [análisis de brechas](brechas-requisitos-v1.1.md) (cobertura, decisiones pendientes y plan de sesiones). Sin cambios de código. | 1 |
 
 Notas por sesión: [01 · Base del sistema](sesiones/01-base-del-sistema.md) ·
 [02 · Marca y panel web](sesiones/02-marca-y-panel-web.md) ·

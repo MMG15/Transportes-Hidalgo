@@ -7,6 +7,7 @@ Control de viajes de camiones (distribución de cal y otros productos) y del **c
 - **Panel web** en http://127.0.0.1:8000 — tablero, viajes, combustible, reportes y catálogo.
 - **API REST** en http://127.0.0.1:8000/docs
 - **Reportes Excel** con la identidad de la empresa.
+- **Documento de requisitos v1.1** (referencia funcional del sistema): [`docs/requisitos_v1.1.md`](docs/requisitos_v1.1.md) · [versión Word](docs/word/Requisitos_Sistema_Trazabilidad_Hidalgo_v1.1.docx) · análisis de brechas código ↔ requisitos en [`docs/brechas-requisitos-v1.1.md`](docs/brechas-requisitos-v1.1.md).
 - **Guía técnica para estudiar el proyecto:** [`docs/guia-tecnica.md`](docs/guia-tecnica.md) · versión Word de la guía y de cada sesión en [`docs/word/`](docs/word/) (`uv run python scripts/generar_word.py`).
 - Historial de cada sesión de trabajo en [`docs/sesiones/`](docs/sesiones/).
 

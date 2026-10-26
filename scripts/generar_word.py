@@ -268,6 +268,7 @@ def _git(*argumentos: str) -> str:
 
 
 def convertir(md: Path, docx: Path, plantilla: Path) -> None:
+    fecha = _fecha_git(md)
     subprocess.run(
         [
             "pandoc", str(md),
@@ -281,8 +282,21 @@ def convertir(md: Path, docx: Path, plantilla: Path) -> None:
             "--output", str(docx),
         ],
         check=True,
-        env={**os.environ, "SOURCE_DATE_EPOCH": _fecha_git(md)},
+        env={**os.environ, "SOURCE_DATE_EPOCH": fecha},
     )  # fmt: skip
+    _fijar_fechas_zip(docx, int(fecha))
+
+
+def _fijar_fechas_zip(docx: Path, epoch: int) -> None:
+    """pandoc no aplica SOURCE_DATE_EPOCH a las partes que copia de la plantilla (tema, pie...):
+    quedan con la hora de generación. Se reescribe el ZIP con la misma fecha en todas las entradas."""
+    fecha = time.gmtime(epoch)[:6]
+    with zipfile.ZipFile(docx) as original:
+        entradas = [(item, original.read(item.filename)) for item in original.infolist()]
+    with zipfile.ZipFile(docx, "w", zipfile.ZIP_DEFLATED) as nuevo:
+        for item, datos in entradas:
+            item.date_time = fecha
+            nuevo.writestr(item, datos)
 
 
 def main() -> None:
